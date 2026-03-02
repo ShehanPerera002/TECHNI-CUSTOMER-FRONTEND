@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/success_card.dart';
+import '../core/assets.dart';
 
 class SuccessScreen extends StatelessWidget {
   const SuccessScreen({super.key});
@@ -7,26 +8,17 @@ class SuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
             Positioned(
-              top: 20,
-              left: 20,
-              child: Row(
-                children: const [
-                  Icon(Icons.build, color: Colors.blue),
-                  SizedBox(width: 8),
-                  Text(
-                    "TECHNI",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ],
+              top: 25,
+              left: 24,
+              child: Image.asset(
+                AppAssets.welcomeLogo,
+                height: 40, // adjusted for proper proportion
+                fit: BoxFit.contain,
               ),
             ),
             const Center(child: SuccessCard()),
