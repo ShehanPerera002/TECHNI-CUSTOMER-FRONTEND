@@ -14,7 +14,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final PageController _carouselController = PageController();
+  final ScrollController _scrollController = ScrollController();
   Timer? _carouselTimer;
+  bool _showStickySearch = false;
+
+  static const double _stickyScrollThreshold = 120;
 
   static const List<_CarouselSlide> _carouselSlides = [
     _CarouselSlide(Icons.bolt, "Emergency Support", "Need urgent help? Get a professional at your door in one tap.", "24/7"),
@@ -51,6 +55,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _startCarouselTimer();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final offset = _scrollController.offset;
+    final showSticky = offset > _stickyScrollThreshold;
+    if (showSticky != _showStickySearch) {
+      setState(() => _showStickySearch = showSticky);
+    }
   }
 
   void _startCarouselTimer() {
@@ -69,6 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _carouselTimer?.cancel();
     _carouselController.dispose();
     _searchController.dispose();
@@ -103,8 +118,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -123,105 +141,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            onChanged: (_) => setState(() {}),
-                            decoration: InputDecoration(
-                              hintText: "Search for a service...",
-                              hintStyle: TextStyle(color: Colors.grey.shade600),
-                              prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
+                        _buildSearchBar(),
                         if (_searchController.text.trim().isNotEmpty) ...[
                           const SizedBox(height: 8),
-                          Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              constraints: const BoxConstraints(maxHeight: 220),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: _filteredServices.isEmpty
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(24),
-                                      child: Center(
-                                        child: Text(
-                                          "No results found",
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      shrinkWrap: true,
-                                      padding: EdgeInsets.zero,
-                                      itemCount: _filteredServices.length,
-                                      itemBuilder: (context, index) {
-                                        final item = _filteredServices[index];
-                                        return InkWell(
-                                          onTap: () {
-                                            _searchController.clear();
-                                            _searchFocusNode.unfocus();
-                                            setState(() {});
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  item.icon,
-                                                  size: 24,
-                                                  color: const Color(0xFF2563EB),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        item.title,
-                                                        style: const TextStyle(
-                                                          fontWeight: FontWeight.w600,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        item.description,
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color: Colors.grey.shade600,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ),
+                          _buildSearchDropdown(),
                         ],
                       ],
                     ),
@@ -292,7 +215,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            ),
+              if (_showStickySearch)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSearchBar(),
+                        if (_searchController.text.trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          _buildSearchDropdown(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
           ],
         ),
       ),
@@ -300,6 +256,109 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {},
         backgroundColor: const Color(0xFF2563EB),
         child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          hintText: "Search for a service...",
+          hintStyle: TextStyle(color: Colors.grey.shade600),
+          prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchDropdown() {
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 220),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: _filteredServices.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    "No results found",
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: _filteredServices.length,
+                itemBuilder: (context, index) {
+                  final item = _filteredServices[index];
+                  return InkWell(
+                    onTap: () {
+                      _searchController.clear();
+                      _searchFocusNode.unfocus();
+                      setState(() {});
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            item.icon,
+                            size: 24,
+                            color: const Color(0xFF2563EB),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  item.description,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }
