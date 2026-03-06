@@ -4,6 +4,7 @@ import 'screens/sign_in_screen.dart';
 import 'screens/verification_screen.dart';
 import 'screens/success_screen.dart';
 import 'screens/create_profile_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   runApp(const TechniApp());
@@ -25,6 +26,7 @@ class TechniApp extends StatelessWidget {
         '/verification': (context) => const VerificationScreen(),
         '/success': (context) => const SuccessScreen(),
         '/createProfile': (context) => const CreateProfileScreen(),
+        '/home': (context) => const MainScreen(),
       },
     );
   }
