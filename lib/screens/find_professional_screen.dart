@@ -81,30 +81,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
           urlTemplate: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
         ),
         MarkerLayer(
-          markers: [
-            Marker(
-              point: _userLocation,
-              width: 40,
-              height: 40,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF60A5FA),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(Icons.person, color: Colors.white, size: 20),
-                ),
-              ),
-            ),
-            ..._professionals.map((p) => Marker(
+          markers: _professionals.map((p) => Marker(
                   point: p.location,
                   width: 44,
                   height: 44,
@@ -140,8 +117,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                       ),
                     ),
                   ),
-                )),
-          ],
+                )).toList(),
         ),
       ],
     );
