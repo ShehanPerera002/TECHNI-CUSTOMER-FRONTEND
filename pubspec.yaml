@@ -29,6 +29,8 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   image_picker: ^1.0.7
+  speech_to_text: ^7.3.0
+  permission_handler: ^11.3.0
   flutter:
     sdk: flutter
 

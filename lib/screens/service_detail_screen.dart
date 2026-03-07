@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../core/assets.dart';
 import '../models/service_detail_data.dart';
@@ -18,26 +21,67 @@ class ServiceDetailScreen extends StatefulWidget {
   State<ServiceDetailScreen> createState() => _ServiceDetailScreenState();
 }
 
-class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
+class _ServiceDetailScreenState extends State<ServiceDetailScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _issueController = TextEditingController();
-  bool _hasVoiceRecording = false;
+  final SpeechToText _speechToText = SpeechToText();
   File? _selectedImage;
+
+  bool _speechEnabled = false;
+  bool _isListening = false;
+  bool _isConvertingToText = false;
+  Timer? _listenTimer;
+  Timer? _convertingTimer;
+  late AnimationController _waveController;
+  String _textBeforeListening = '';
+  static const _minConvertingDuration = Duration(milliseconds: 800);
 
   ServiceDetailData get service => widget.service;
 
   bool get _isFormValid =>
-      _issueController.text.trim().isNotEmpty ||
-      _hasVoiceRecording ||
-      _selectedImage != null;
+      _issueController.text.trim().isNotEmpty || _selectedImage != null;
 
   @override
   void initState() {
     super.initState();
     _issueController.addListener(() => setState(() {}));
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize(
+      onStatus: (status) {
+        if (status == 'done' || status == 'notListening') {
+          if (mounted) setState(() => _isListening = false);
+          _listenTimer?.cancel();
+          _clearConvertingState();
+        }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _isListening = false);
+        _clearConvertingState();
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
+  void _clearConvertingState() {
+    if (!_isConvertingToText) return;
+    _convertingTimer?.cancel();
+    _convertingTimer = Timer(_minConvertingDuration, () {
+      if (mounted) setState(() => _isConvertingToText = false);
+    });
   }
 
   @override
   void dispose() {
+    _listenTimer?.cancel();
+    _convertingTimer?.cancel();
+    _waveController.dispose();
     _issueController.dispose();
     super.dispose();
   }
@@ -45,45 +89,53 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
+    if (image != null && mounted) {
       setState(() => _selectedImage = File(image.path));
     }
   }
 
-  void _showVoiceRecordingPlaceholder() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.mic, size: 48, color: Colors.grey.shade600),
-            const SizedBox(height: 16),
-            Text(
-              "Voice recording placeholder",
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Tap Done to add your voice note.",
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() => _hasVoiceRecording = true);
-                  Navigator.pop(context);
-                },
-                child: const Text("Done"),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _toggleListening() async {
+    if (!_speechEnabled) return;
+
+    if (_speechToText.isListening) {
+      setState(() => _isConvertingToText = true);
+      await _speechToText.stop();
+      _listenTimer?.cancel();
+      setState(() => _isListening = false);
+    } else {
+      _textBeforeListening = _issueController.text.trim();
+      await _speechToText.listen(
+        onResult: _onSpeechResult,
+        listenFor: const Duration(seconds: 20),
+        pauseFor: const Duration(seconds: 3),
+        listenOptions: SpeechListenOptions(partialResults: true),
+      );
+
+      setState(() => _isListening = true);
+
+      _listenTimer = Timer(const Duration(seconds: 20), () {
+        if (_speechToText.isListening) {
+          if (mounted) setState(() => _isConvertingToText = true);
+          _speechToText.stop();
+        }
+        if (mounted) setState(() => _isListening = false);
+      });
+    }
+  }
+
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    final text = result.recognizedWords;
+    final prefix = _textBeforeListening;
+    final newText = prefix.isEmpty ? text : '$prefix $text';
+    if (newText.isNotEmpty) {
+      _issueController.text = newText;
+      _issueController.selection =
+          TextSelection.collapsed(offset: _issueController.text.length);
+    }
+    if (result.finalResult) {
+      _clearConvertingState();
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -154,7 +206,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -190,46 +243,162 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Widget _buildIssueInput() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _issueController,
-              decoration: InputDecoration(
-                hintText: "Describe your issue...",
-                hintStyle: TextStyle(color: Colors.grey.shade600),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isListening ? const Color(0xFF2563EB) : Colors.grey.shade300,
+            ),
+          ),
+          child: Column(
+            children: [
+              TextField(
+                controller: _issueController,
+                maxLines: 5,
+                minLines: 3,
+                decoration: InputDecoration(
+                  hintText: "Describe your issue...",
+                  hintStyle: TextStyle(color: Colors.grey.shade600),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 4,
+                  ),
+                  isDense: true,
+                ),
+              ),
+              if (_selectedImage != null) ...[
+                const SizedBox(height: 12),
+                _buildImagePreview(),
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_isListening) _buildVoiceAnimation(),
+                  if (_isConvertingToText) _buildConvertingIndicator(),
+                  IconButton(
+                    icon: Icon(
+                      Icons.mic,
+                      color: _isListening
+                          ? const Color(0xFF2563EB)
+                          : _issueController.text.trim().isNotEmpty
+                              ? const Color(0xFF2563EB)
+                              : Colors.grey.shade600,
+                    ),
+                    onPressed: _speechEnabled ? _toggleListening : null,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.camera_alt,
+                      color: _selectedImage != null
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade600,
+                    ),
+                    onPressed: _pickImage,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (_isListening)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              "Listening... (max 20 seconds) • Tap mic to stop",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
               ),
             ),
           ),
-          IconButton(
-            icon: Icon(
-              Icons.mic,
-              color: _hasVoiceRecording
-                  ? const Color(0xFF2563EB)
-                  : Colors.grey.shade600,
-            ),
-            onPressed: _showVoiceRecordingPlaceholder,
+      ],
+    );
+  }
+
+  Widget _buildImagePreview() {
+    if (_selectedImage == null) return const SizedBox.shrink();
+    return Stack(
+      alignment: Alignment.topRight,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.file(
+            _selectedImage!,
+            height: 120,
+            width: double.infinity,
+            fit: BoxFit.cover,
           ),
-          IconButton(
-            icon: Icon(
-              Icons.camera_alt,
-              color: _selectedImage != null
-                  ? const Color(0xFF2563EB)
-                  : Colors.grey.shade600,
+        ),
+        IconButton(
+          icon: const Icon(Icons.close, color: Colors.white, size: 20),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.black54,
+            padding: const EdgeInsets.all(4),
+            minimumSize: const Size(32, 32),
+          ),
+          onPressed: () {
+            setState(() => _selectedImage = null);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConvertingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: const Color(0xFF2563EB),
             ),
-            onPressed: _pickImage,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            "Converting to text...",
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildVoiceAnimation() {
+    return AnimatedBuilder(
+      animation: _waveController,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (i) {
+            final height = 8.0 + 12 * ((_waveController.value - 0.5).abs() * 2);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: 4,
+              height: 8 + (i % 2 == 0 ? height : 16 - height),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 
