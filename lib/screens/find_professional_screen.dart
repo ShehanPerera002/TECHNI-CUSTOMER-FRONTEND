@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -19,10 +22,14 @@ class FindProfessionalScreen extends StatefulWidget {
 
 class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   static const _userLocation = LatLng(6.9271, 79.8612);
-  late final List<Professional> _professionals;
+  late List<Professional> _professionals;
   Professional? _selectedProfessional;
   String _paymentMethod = 'Cash';
   String _language = 'Sinhala';
+  Timer? _movementTimer;
+  final Random _random = Random();
+  static const _movingIndices = [0, 2]; // Saman & Kamala get live movement
+  static const _timeOptions = ['10 min', '12 min', '15 min', '18 min', '20 min'];
 
   static const _paymentOptions = ['Cash', 'Card payment'];
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
@@ -30,7 +37,34 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   @override
   void initState() {
     super.initState();
-    _professionals = Professional.getDummyForCategory(widget.serviceTitle);
+    _professionals = List.from(Professional.getDummyForCategory(widget.serviceTitle));
+    _startLiveMovement();
+  }
+
+  void _startLiveMovement() {
+    _movementTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!mounted) return;
+      setState(() {
+        for (final i in _movingIndices) {
+          if (i >= _professionals.length) continue;
+          final p = _professionals[i];
+          final delta = 0.0008 * (_random.nextDouble() - 0.5) * 2;
+          final newLat = p.location.latitude + delta;
+          final newLng = p.location.longitude + delta * (_random.nextBool() ? 1 : -1);
+          final newTime = _timeOptions[_random.nextInt(_timeOptions.length)];
+          _professionals[i] = p.copyWith(
+            location: LatLng(newLat, newLng),
+            timeToBook: newTime,
+          );
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _movementTimer?.cancel();
+    super.dispose();
   }
 
   @override
