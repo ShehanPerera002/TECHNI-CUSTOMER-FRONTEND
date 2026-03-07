@@ -9,6 +9,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../core/assets.dart';
 import '../models/service_detail_data.dart';
 import '../widgets/primary_button.dart';
+import 'find_professional_screen.dart';
 
 /// Reusable service detail page. Pass [service] with dynamic content
 /// (title, description, pricing, CTA text).
@@ -200,7 +201,18 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
             const SizedBox(height: 32),
             PrimaryButton(
               text: service.ctaText,
-              onPressed: _isFormValid ? () {} : null,
+              onPressed: _isFormValid
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FindProfessionalScreen(
+                            serviceTitle: service.pageTitle,
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
             ),
             if (!_isFormValid) ...[
               const SizedBox(height: 12),
