@@ -1,0 +1,103 @@
+{
+  "1": [
+    {
+      "customerName": "Shehan Perera",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/32.jpg",
+      "rating": 5.0,
+      "daysAgo": 1,
+      "text": "Excellent service! Saman fixed our kitchen leak quickly and professionally. Highly recommended!"
+    },
+    {
+      "customerName": "Nadeesha Wijesinghe",
+      "avatarUrl": "https://randomuser.me/api/portraits/women/44.jpg",
+      "rating": 5.0,
+      "daysAgo": 3,
+      "text": "Very reliable plumber. Came on time and sorted our bathroom pipes. Fair pricing too."
+    },
+    {
+      "customerName": "Ruwan Dias",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/55.jpg",
+      "rating": 4.5,
+      "daysAgo": 5,
+      "text": "Good work on the drain unblocking. Would hire again."
+    }
+  ],
+  "2": [
+    {
+      "customerName": "Chamari Jayawardena",
+      "avatarUrl": "https://randomuser.me/api/portraits/women/22.jpg",
+      "rating": 4.8,
+      "daysAgo": 2,
+      "text": "Sunil was very professional. Fixed our water heater issue in no time."
+    },
+    {
+      "customerName": "Malik Fernando",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/67.jpg",
+      "rating": 5.0,
+      "daysAgo": 4,
+      "text": "Great experience. Clean work and explained everything clearly."
+    }
+  ],
+  "3": [
+    {
+      "customerName": "Anura Silva",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/12.jpg",
+      "rating": 4.5,
+      "daysAgo": 1,
+      "text": "Kamala did a wonderful job with our pipe installation. Very thorough."
+    },
+    {
+      "customerName": "Dilini Rajapaksa",
+      "avatarUrl": "https://randomuser.me/api/portraits/women/33.jpg",
+      "rating": 5.0,
+      "daysAgo": 6,
+      "text": "Highly skilled and polite. Our whole family was impressed."
+    },
+    {
+      "customerName": "Prasanna Gunaratne",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/78.jpg",
+      "rating": 4.5,
+      "daysAgo": 10,
+      "text": "Emergency repair was handled promptly. Thank you!"
+    }
+  ],
+  "4": [
+    {
+      "customerName": "Tharindu De Silva",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/41.jpg",
+      "rating": 5.0,
+      "daysAgo": 2,
+      "text": "Rohan is excellent. Fixed multiple leaks in our old house. Very satisfied."
+    },
+    {
+      "customerName": "Sachini Perera",
+      "avatarUrl": "https://randomuser.me/api/portraits/women/55.jpg",
+      "rating": 4.7,
+      "daysAgo": 7,
+      "text": "Fast and efficient. Would definitely recommend to friends."
+    }
+  ],
+  "5": [
+    {
+      "customerName": "Dinesh Fonseka",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/28.jpg",
+      "rating": 4.6,
+      "daysAgo": 3,
+      "text": "Nimal did a great job with our bathroom renovation plumbing."
+    },
+    {
+      "customerName": "Sandya Wijeratne",
+      "avatarUrl": "https://randomuser.me/api/portraits/women/66.jpg",
+      "rating": 5.0,
+      "daysAgo": 5,
+      "text": "Very professional and honest about what needed to be done."
+    },
+    {
+      "customerName": "Chaminda Bandara",
+      "avatarUrl": "https://randomuser.me/api/portraits/men/51.jpg",
+      "rating": 4.8,
+      "daysAgo": 8,
+      "text": "Quick response and quality work. Will use again."
+    }
+  ]
+}
