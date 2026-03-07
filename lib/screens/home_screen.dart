@@ -58,6 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 200 / hr",
       materials: "At Cost",
       ctaText: "Find a Plumber",
+      issueHint: "Describe your plumbing issue... e.g. leaking pipe, clogged drain, toilet repair",
+      exampleIssues: ["Leaking pipe", "Clogged drain", "Water heater not working", "Toilet repair", "Low water pressure"],
     ),
     ServiceDetailData(
       icon: Icons.electrical_services,
@@ -71,6 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 250 / hr",
       materials: "At Cost",
       ctaText: "Find an Electrician",
+      issueHint: "Describe your electrical issue... e.g. wiring, outlet, lighting, fuse",
+      exampleIssues: ["Flickering lights", "Outlet not working", "Wiring repair", "Circuit breaker trips", "Light installation"],
     ),
     ServiceDetailData(
       icon: Icons.grass,
@@ -84,6 +88,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 180 / hr",
       materials: "At Cost",
       ctaText: "Find a Gardener",
+      issueHint: "Describe your garden needs... e.g. lawn mowing, pruning, landscaping",
+      exampleIssues: ["Lawn mowing", "Hedge pruning", "Weeding", "Garden design", "Plant care"],
     ),
     ServiceDetailData(
       icon: Icons.handyman,
@@ -97,6 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 220 / hr",
       materials: "At Cost",
       ctaText: "Find a Carpenter",
+      issueHint: "Describe your carpentry need... e.g. furniture repair, door, cabinet",
+      exampleIssues: ["Furniture repair", "Door installation", "Cabinet repair", "Custom shelving", "Wood finishing"],
     ),
     ServiceDetailData(
       icon: Icons.format_paint,
@@ -110,6 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 200 / hr",
       materials: "At Cost",
       ctaText: "Find a Painter",
+      issueHint: "Describe your painting need... e.g. room, exterior, touch-up",
+      exampleIssues: ["Interior room", "Exterior walls", "Touch-up", "Full repaint", "Color change"],
     ),
     ServiceDetailData(
       icon: Icons.ac_unit,
@@ -123,6 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 250 / hr",
       materials: "At Cost",
       ctaText: "Find an AC Technician",
+      issueHint: "Describe your AC issue... e.g. not cooling, leaking, noisy",
+      exampleIssues: ["Not cooling", "AC leaking", "Noisy unit", "Installation", "Gas recharge"],
     ),
     ServiceDetailData(
       icon: Icons.security,
@@ -136,6 +148,8 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 280 / hr",
       materials: "At Cost",
       ctaText: "Find an ELV Repairer",
+      issueHint: "Describe your ELV issue... e.g. CCTV, alarm, doorbell",
+      exampleIssues: ["CCTV not working", "Alarm repair", "Doorbell install", "Camera setup", "System upgrade"],
     ),
   ];
 
