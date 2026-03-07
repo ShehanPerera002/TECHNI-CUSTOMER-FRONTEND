@@ -20,14 +20,15 @@ class Professional {
   });
 
   static List<Professional> getDummyPlumbers() {
-    const center = LatLng(6.9271, 79.8612); // Colombo
+    const center = LatLng(6.9271, 79.8612); // Colombo - user location
+    const d = 0.004; // ~450m spacing so avatars spread across the map
     return [
       Professional(
         id: '1',
         name: 'Saman Perera',
         rating: 4.9,
         timeToBook: '15 min',
-        location: LatLng(center.latitude + 0.002, center.longitude + 0.001),
+        location: LatLng(center.latitude + d, center.longitude + d),
         avatarUrl: 'https://randomuser.me/api/portraits/men/11.jpg',
       ),
       Professional(
@@ -35,7 +36,7 @@ class Professional {
         name: 'Sunil Santha',
         rating: 4.8,
         timeToBook: '30 min',
-        location: LatLng(center.latitude - 0.0015, center.longitude + 0.002),
+        location: LatLng(center.latitude - d, center.longitude + d * 1.2),
         avatarUrl: 'https://randomuser.me/api/portraits/men/22.jpg',
       ),
       Professional(
@@ -43,7 +44,7 @@ class Professional {
         name: 'Kamala Silva',
         rating: 4.5,
         timeToBook: '45 min',
-        location: LatLng(center.latitude + 0.001, center.longitude - 0.0015),
+        location: LatLng(center.latitude + d * 0.8, center.longitude - d * 1.5),
         avatarUrl: 'https://randomuser.me/api/portraits/women/11.jpg',
       ),
       Professional(
@@ -51,7 +52,7 @@ class Professional {
         name: 'Rohan Fernando',
         rating: 4.7,
         timeToBook: '20 min',
-        location: LatLng(center.latitude - 0.002, center.longitude),
+        location: LatLng(center.latitude - d * 1.3, center.longitude - d * 0.5),
         avatarUrl: 'https://randomuser.me/api/portraits/men/33.jpg',
       ),
       Professional(
@@ -59,7 +60,7 @@ class Professional {
         name: 'Nimal Jayawardena',
         rating: 4.6,
         timeToBook: '25 min',
-        location: LatLng(center.latitude + 0.0015, center.longitude + 0.0025),
+        location: LatLng(center.latitude + d * 1.2, center.longitude + d * 0.3),
         avatarUrl: 'https://randomuser.me/api/portraits/men/44.jpg',
       ),
     ];
