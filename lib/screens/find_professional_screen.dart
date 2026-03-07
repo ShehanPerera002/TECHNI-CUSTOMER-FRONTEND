@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/professional.dart';
+import 'professional_profile_screen.dart';
 
 /// Screen showing map with available professionals and booking options.
 class FindProfessionalScreen extends StatefulWidget {
@@ -216,17 +217,17 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                             Text(
                               p.timeToBook,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 color: Colors.grey.shade700,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             CircleAvatar(
-                              radius: 22,
+                              radius: 18,
                               backgroundImage: NetworkImage(p.avatarUrl),
                               onBackgroundImageError: (object, stackTrace) {},
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               p.name,
                               style: const TextStyle(
@@ -237,7 +238,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 1),
+                            const SizedBox(height: 0),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
@@ -268,7 +269,14 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                 child: FilledButton.icon(
                   onPressed: _selectedProfessional != null
                       ? () {
-                          // TODO: Navigate to profile
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfessionalProfileScreen(
+                                professional: _selectedProfessional!,
+                              ),
+                            ),
+                          );
                         }
                       : null,
                   icon: const Icon(Icons.person_outline, size: 18),
