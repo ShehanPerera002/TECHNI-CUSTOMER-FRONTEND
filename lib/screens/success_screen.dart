@@ -4,7 +4,9 @@ import '../widgets/primary_button.dart';
 import '../widgets/techni_logo.dart';
 
 class SuccessScreen extends StatelessWidget {
-  const SuccessScreen({super.key});
+  const SuccessScreen({super.key, this.phone = ''});
+
+  final String phone;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +26,11 @@ class SuccessScreen extends StatelessWidget {
               PrimaryButton(
                 text: 'Continue',
                 onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/createProfile');
+                  Navigator.pushReplacementNamed(
+                    context,
+                    '/createProfile',
+                    arguments: {'phone': phone},
+                  );
                 },
               ),
               const SizedBox(height: 24),
