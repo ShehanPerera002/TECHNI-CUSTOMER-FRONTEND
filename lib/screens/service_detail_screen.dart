@@ -254,10 +254,57 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
     );
   }
 
+  void _addExampleIssue(String text) {
+    final current = _issueController.text.trim();
+    _issueController.text = current.isEmpty ? text : '$current, $text';
+    _issueController.selection =
+        TextSelection.collapsed(offset: _issueController.text.length);
+    setState(() {});
+  }
+
   Widget _buildIssueInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (service.exampleIssues.isNotEmpty) ...[
+          Text(
+            'Common issues:',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: service.exampleIssues
+                .map((issue) => GestureDetector(
+                      onTap: () => _addExampleIssue(issue),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          issue,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+        ],
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -274,7 +321,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
                 maxLines: 5,
                 minLines: 3,
                 decoration: InputDecoration(
-                  hintText: "Describe your issue...",
+                  hintText: service.issueHint,
                   hintStyle: TextStyle(color: Colors.grey.shade600),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
