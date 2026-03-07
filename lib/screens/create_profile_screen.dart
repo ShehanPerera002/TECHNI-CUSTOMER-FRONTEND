@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/customer_api.dart';
+
 class CreateProfileScreen extends StatefulWidget {
   const CreateProfileScreen({super.key});
 
@@ -19,8 +21,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   DateTime? selectedDate;
   File? _selectedImage;
+  String? _phone;
 
   bool _isFormValid = false;
+  bool _isSaving = false;
+  String? _errorText;
+  bool _argsLoaded = false;
 
   @override
   void initState() {
@@ -44,6 +50,19 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     setState(() {
       _isFormValid = isValid;
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_argsLoaded) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _phone = args['phone'] as String?;
+    }
+
+    _argsLoaded = true;
   }
 
   // Date Picker
@@ -76,6 +95,54 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       });
 
       _validateForm();
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_isFormValid || _isSaving) return;
+
+    if (_phone == null || _phone!.isEmpty) {
+      setState(() {
+        _errorText = 'Phone number is missing. Please sign in again.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _errorText = null;
+    });
+
+    try {
+      await CustomerApi.createProfile(
+        phone: _phone!,
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        birthDate: _birthDateController.text.trim(),
+        address: _addressController.text.trim(),
+        profileImage: _selectedImage?.path,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile saved successfully')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = 'Failed to save profile. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 
@@ -298,34 +365,41 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                 bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 25,
                 top: 10,
               ),
-              child: GestureDetector(
-                onTap: _isFormValid
-                    ? () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Profile Saved")),
-                        );
-                      }
-                    : null,
-                child: Container(
-                  width: double.infinity,
-                  height: 55,
-                  decoration: BoxDecoration(
-                    color: _isFormValid
-                        ? const Color(0xFF2563EB)
-                        : Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      "Save Profile",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_errorText != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        _errorText!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  GestureDetector(
+                    onTap: _isFormValid && !_isSaving ? _saveProfile : null,
+                    child: Container(
+                      width: double.infinity,
+                      height: 55,
+                      decoration: BoxDecoration(
+                        color: _isFormValid && !_isSaving
+                            ? const Color(0xFF2563EB)
+                            : Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _isSaving ? 'Saving...' : 'Save Profile',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
