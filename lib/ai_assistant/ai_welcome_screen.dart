@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_header.dart';
 
 // shows the welcome page for the AI Assistant
 class AIWelcomeScreen extends StatelessWidget {
@@ -8,9 +9,7 @@ class AIWelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       //App bar with title
-      appBar: AppBar(
-        title: const Text("AI Assistant"), // Title
-      ),
+      appBar: const AppHeader(title: "AI Assistant"),
 
       // Main content of the AI welcome screen
       body: Center(
