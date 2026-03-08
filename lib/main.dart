@@ -30,6 +30,11 @@ class TechniApp extends StatelessWidget {
         '/verification': (context) => const VerificationScreen(),
         '/success': (context) => const SuccessScreen(),
         '/createProfile': (context) => const CreateProfileScreen(),
+        '/': (context) => const AIWelcomeScreen(),
+        '/chat': (context) => const AiChatScreen(),
+        '/analysis': (context) => const AiAnalysisScreen(),
+        '/checklist': (context) => const AiChecklistScreen(),
+        '/technician': (context) => const TechnicianMatchScreen(),
       },
     );
   }
