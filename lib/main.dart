@@ -4,6 +4,11 @@ import 'screens/sign_in_screen.dart';
 import 'screens/verification_screen.dart';
 import 'screens/success_screen.dart';
 import 'screens/create_profile_screen.dart';
+import 'ai_assistant/ai_welcome_screen.dart';
+import 'ai_assistant/ai_analysis_screen.dart';
+import 'ai_assistant/ai_checklist_screen.dart';
+import 'ai_assistant/technician_match.dart';
+import 'ai_assistant/ai_chat_screen.dart';
 
 void main() {
   runApp(const TechniApp());
