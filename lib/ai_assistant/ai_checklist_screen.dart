@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/checklist_item.dart';
 
 //This screen shows safety steps before calling a technician
 class AiChecklistScreen extends StatelessWidget {
@@ -23,15 +24,8 @@ class AiChecklistScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             //Checklist items
-            const ListTile(
-              leading: Icon(Icons.check_circle_outline),
-              title: Text("Check power connection."),
-            ),
-
-            const ListTile(
-              leading: Icon(Icons.check_circle_outline),
-              title: Text("Restart the appliance."),
-            ),
+            const ChecklistItem(text: "Check power connection"),
+            const ChecklistItem(text: "Restart the appliance"),
 
             const SizedBox(height: 30),
 
