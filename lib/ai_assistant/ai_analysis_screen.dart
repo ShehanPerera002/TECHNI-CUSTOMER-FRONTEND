@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/section_title.dart';
+import '../widgets/analysis_card.dart';
 
 // This screen shows the AI analysis of the user`s problem
 class AiAnalysisScreen extends StatelessWidget {
@@ -16,35 +18,14 @@ class AiAnalysisScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             //Title
-            const Text(
-              "Problem Analysis",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
+            const SectionTitle(title: "Problem Analysis"),
 
             const SizedBox(height: 20),
 
             //AI result Card
-            Card(
-              elevation: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(15),
-
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      "Possible Issue.",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-
-                    SizedBox(height: 10),
-
-                    Text(
-                      "The washing machine may have a drainage blockage or motor issue.",
-                    ),
-                  ],
-                ),
-              ),
+            const AnalysisCard(
+              problem:
+                  "The washing machine may have a drainage blockage or motor issue.",
             ),
 
             const SizedBox(height: 20),
