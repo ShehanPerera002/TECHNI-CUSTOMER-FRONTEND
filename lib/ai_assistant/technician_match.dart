@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_header.dart';
 
 //This screen shows reccomended technicians
 class TechnicianMatchScreen extends StatelessWidget {
@@ -7,7 +8,7 @@ class TechnicianMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Technician Match")),
+      appBar: const AppHeader(title: "Technician Match"),
 
       body: Padding(
         padding: const EdgeInsets.all(20),
