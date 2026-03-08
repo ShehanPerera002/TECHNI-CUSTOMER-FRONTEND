@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_header.dart';
 
 // Allows users to chat with the AI assistant
 
@@ -14,9 +15,15 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final TextEditingController _messageController = TextEditingController();
 
   @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("AI Chat")),
+      appBar: const AppHeader(title: "AI Assistant"),
 
       body: Column(
         children: [
@@ -24,7 +31,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           Expanded(
             child: ListView(
               children: const [
-                ListTile(title: Text("AI: Heloo! How can I help you today")),
+                ListTile(title: Text("AI: Hello! How can I help you today")),
               ],
             ),
           ),
@@ -34,7 +41,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             padding: const EdgeInsets.all(10),
             child: Row(
               children: [
-                // Text field fwhere user types message
+                // Text field where user types message
                 Expanded(
                   child: TextField(
                     controller: _messageController,
