@@ -6,6 +6,9 @@ class AppHeader extends StatelessWidget {
   const AppHeader({super.key, required this.title});
 
   @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
