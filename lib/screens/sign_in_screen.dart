@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/firebase_phone_auth_service.dart';
+import 'success_screen.dart';
 import '../widgets/primary_button.dart';
 import '../core/assets.dart';
 
@@ -14,6 +16,8 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
   bool _isValid = false;
+  bool _isSubmitting = false;
+  String? _errorText;
 
   // Sri Lankan mobile regex
   final RegExp _sriLankaRegex = RegExp(r'^(70|71|72|74|75|76|77|78)\d{7}$');
@@ -41,14 +45,59 @@ class _SignInScreenState extends State<SignInScreen> {
     });
   }
 
-  void _goToVerification() {
+  Future<void> _goToVerification() async {
     if (!_isValid) return;
 
-    Navigator.pushNamed(
-      context,
-      '/verification',
-      arguments: "+94${_phoneController.text}",
-    );
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    final phone = '+94${_phoneController.text}';
+
+    try {
+      final result = await FirebasePhoneAuthService.sendOtp(phone: phone);
+
+      if (!mounted) return;
+
+      if (result.autoVerified) {
+        await Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => SuccessScreen(phone: phone)),
+        );
+        return;
+      }
+
+      if (result.verificationId == null || result.verificationId!.isEmpty) {
+        throw const PhoneAuthFailure('Failed to start OTP verification.');
+      }
+
+      await Navigator.pushNamed(
+        context,
+        '/verification',
+        arguments: {
+          'phone': phone,
+          'verificationId': result.verificationId,
+          'resendToken': result.resendToken,
+        },
+      );
+    } on PhoneAuthFailure catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = 'Failed to send OTP: $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -114,9 +163,20 @@ class _SignInScreenState extends State<SignInScreen> {
 
               const SizedBox(height: 30),
 
+              if (_errorText != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _errorText!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+
               PrimaryButton(
-                text: "Continue",
-                onPressed: _isValid ? _goToVerification : null,
+                text: _isSubmitting ? 'Sending...' : 'Continue',
+                onPressed: _isValid && !_isSubmitting
+                    ? _goToVerification
+                    : null,
               ),
             ],
           ),

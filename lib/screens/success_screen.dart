@@ -1,28 +1,41 @@
 import 'package:flutter/material.dart';
 import '../widgets/success_card.dart';
-import '../core/assets.dart';
+import '../widgets/primary_button.dart';
+import '../widgets/techni_logo.dart';
 
 class SuccessScreen extends StatelessWidget {
-  const SuccessScreen({super.key});
+  const SuccessScreen({super.key, this.phone = ''});
+
+  final String phone;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned(
-              top: 25,
-              left: 24,
-              child: Image.asset(
-                AppAssets.welcomeLogo,
-                height: 40, // adjusted for proper proportion
-                fit: BoxFit.contain,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              const TechniLogo(),
+              const Spacer(),
+              const Center(child: SuccessCard()),
+              const Spacer(),
+              PrimaryButton(
+                text: 'Continue',
+                onPressed: () {
+                  Navigator.pushReplacementNamed(
+                    context,
+                    '/createProfile',
+                    arguments: {'phone': phone},
+                  );
+                },
               ),
-            ),
-            const Center(child: SuccessCard()),
-          ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
