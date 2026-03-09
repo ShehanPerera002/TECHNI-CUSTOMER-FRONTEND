@@ -6,6 +6,7 @@ import 'screens/sign_in_screen.dart';
 import 'screens/verification_screen.dart';
 import 'screens/success_screen.dart';
 import 'screens/create_profile_screen.dart';
+import 'screens/main_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,14 @@ Future<void> main() async {
   runApp(const TechniApp());
 }
 
+Future<void> _requestPermissions() async {
+  await Future.wait([
+    Permission.microphone.request(),
+    Permission.camera.request(),
+    Permission.locationWhenInUse.request(),
+  ]);
+}
+
 class TechniApp extends StatelessWidget {
   const TechniApp({super.key});
 
@@ -40,6 +49,7 @@ class TechniApp extends StatelessWidget {
         '/verification': (context) => const VerificationScreen(),
         '/success': (context) => const SuccessScreen(),
         '/createProfile': (context) => const CreateProfileScreen(),
+        '/home': (context) => const MainScreen(),
       },
     );
   }
