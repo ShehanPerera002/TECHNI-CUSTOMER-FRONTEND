@@ -1,0 +1,83 @@
+{
+  "plumber-1": [
+    {"customerName": "Shehan Perera", "avatarUrl": "https://randomuser.me/api/portraits/men/32.jpg", "rating": 5.0, "daysAgo": 1, "text": "Excellent service! Saman fixed our kitchen leak quickly and professionally. Highly recommended!"},
+    {"customerName": "Nadeesha Wijesinghe", "avatarUrl": "https://randomuser.me/api/portraits/women/44.jpg", "rating": 5.0, "daysAgo": 3, "text": "Very reliable plumber. Came on time and sorted our bathroom pipes. Fair pricing too."}
+  ],
+  "plumber-2": [
+    {"customerName": "Chamari Jayawardena", "avatarUrl": "https://randomuser.me/api/portraits/women/22.jpg", "rating": 4.8, "daysAgo": 2, "text": "Sunil was very professional. Fixed our water heater issue in no time."},
+    {"customerName": "Malik Fernando", "avatarUrl": "https://randomuser.me/api/portraits/men/67.jpg", "rating": 5.0, "daysAgo": 4, "text": "Great experience. Clean work and explained everything clearly."}
+  ],
+  "plumber-3": [
+    {"customerName": "Anura Silva", "avatarUrl": "https://randomuser.me/api/portraits/men/12.jpg", "rating": 4.5, "daysAgo": 1, "text": "Kamala did a wonderful job with our pipe installation. Very thorough."}
+  ],
+  "plumber-4": [
+    {"customerName": "Tharindu De Silva", "avatarUrl": "https://randomuser.me/api/portraits/men/41.jpg", "rating": 5.0, "daysAgo": 2, "text": "Rohan is excellent. Fixed multiple leaks in our old house. Very satisfied."}
+  ],
+  "plumber-5": [
+    {"customerName": "Dinesh Fonseka", "avatarUrl": "https://randomuser.me/api/portraits/men/28.jpg", "rating": 4.6, "daysAgo": 3, "text": "Nimal did a great job with our bathroom renovation plumbing."}
+  ],
+  "electrician-1": [
+    {"customerName": "Kasun Ranasinghe", "avatarUrl": "https://randomuser.me/api/portraits/men/19.jpg", "rating": 5.0, "daysAgo": 1, "text": "Dilshan rewired our entire house. Professional and safe. Very happy!"},
+    {"customerName": "Dulani Wijesekera", "avatarUrl": "https://randomuser.me/api/portraits/women/46.jpg", "rating": 4.9, "daysAgo": 5, "text": "Fixed our electrical panel issue. Knowledgeable and efficient."}
+  ],
+  "electrician-2": [
+    {"customerName": "Chaminda Kulatunga", "avatarUrl": "https://randomuser.me/api/portraits/men/53.jpg", "rating": 4.7, "daysAgo": 2, "text": "Nirosha installed new outlets. Clean work, fair price."}
+  ],
+  "electrician-3": [
+    {"customerName": "Shirani Perera", "avatarUrl": "https://randomuser.me/api/portraits/women/29.jpg", "rating": 5.0, "daysAgo": 4, "text": "Chandima did beautiful lighting for our living room. Highly recommended!"}
+  ],
+  "electrician-4": [
+    {"customerName": "Ruwan Pathirana", "avatarUrl": "https://randomuser.me/api/portraits/men/64.jpg", "rating": 4.6, "daysAgo": 6, "text": "Good electrical repair work. Tharanga was punctual and helpful."}
+  ],
+  "electrician-5": [
+    {"customerName": "Chandrika Gunawardena", "avatarUrl": "https://randomuser.me/api/portraits/women/38.jpg", "rating": 4.8, "daysAgo": 3, "text": "Manjula fixed our faulty wiring. Very professional."}
+  ],
+  "gardener-1": [
+    {"customerName": "Ranil Abeysekera", "avatarUrl": "https://randomuser.me/api/portraits/men/26.jpg", "rating": 5.0, "daysAgo": 2, "text": "Bandula transformed our backyard. Amazing landscaping work!"},
+    {"customerName": "Manel Dias", "avatarUrl": "https://randomuser.me/api/portraits/women/51.jpg", "rating": 4.9, "daysAgo": 7, "text": "Our lawn has never looked better. Regular maintenance is excellent."}
+  ],
+  "gardener-2": [
+    {"customerName": "Gamini Weerasinghe", "avatarUrl": "https://randomuser.me/api/portraits/men/39.jpg", "rating": 4.7, "daysAgo": 4, "text": "Sunethra created a beautiful flower garden. Very talented!"}
+  ],
+  "gardener-3": [
+    {"customerName": "Sujatha Fernando", "avatarUrl": "https://randomuser.me/api/portraits/women/34.jpg", "rating": 5.0, "daysAgo": 1, "text": "Ajith maintains our garden perfectly. Hedge trimming was top notch."}
+  ],
+  "gardener-4": [
+    {"customerName": "Prasanna Jayaweera", "avatarUrl": "https://randomuser.me/api/portraits/men/71.jpg", "rating": 4.6, "daysAgo": 5, "text": "Ruwani keeps our garden tidy. Reliable service."}
+  ],
+  "gardener-5": [
+    {"customerName": "Kumudu Wickrama", "avatarUrl": "https://randomuser.me/api/portraits/women/59.jpg", "rating": 4.8, "daysAgo": 3, "text": "Thusitha did great lawn care and pruning. Would recommend."}
+  ],
+  "carpenter-1": [
+    {"customerName": "Upul Bandara", "avatarUrl": "https://randomuser.me/api/portraits/men/17.jpg", "rating": 5.0, "daysAgo": 2, "text": "Asela repaired our antique table beautifully. Master craftsman!"},
+    {"customerName": "Sharmila Liyanage", "avatarUrl": "https://randomuser.me/api/portraits/women/43.jpg", "rating": 4.9, "daysAgo": 6, "text": "Custom cabinet work was excellent. Very skilled carpenter."}
+  ],
+  "carpenter-2": [
+    {"customerName": "Sunil Herath", "avatarUrl": "https://randomuser.me/api/portraits/men/54.jpg", "rating": 4.8, "daysAgo": 3, "text": "Indika fitted new doors. Perfect fit and finish."}
+  ],
+  "carpenter-3": [
+    {"customerName": "Nimali Rodrigo", "avatarUrl": "https://randomuser.me/api/portraits/women/27.jpg", "rating": 5.0, "daysAgo": 4, "text": "Nadeeka assembled our furniture and did repairs. Very pleased!"}
+  ],
+  "carpenter-4": [
+    {"customerName": "Sarath Gunasekera", "avatarUrl": "https://randomuser.me/api/portraits/men/63.jpg", "rating": 4.7, "daysAgo": 8, "text": "Kumara built custom shelving. Quality workmanship."}
+  ],
+  "carpenter-5": [
+    {"customerName": "Anoma Senanayake", "avatarUrl": "https://randomuser.me/api/portraits/women/56.jpg", "rating": 4.6, "daysAgo": 5, "text": "Chamari fixed our wooden chairs. Good repair work."}
+  ],
+  "painter-1": [
+    {"customerName": "Janaka Edirisinghe", "avatarUrl": "https://randomuser.me/api/portraits/men/23.jpg", "rating": 5.0, "daysAgo": 1, "text": "Roshan painted our whole house. Flawless finish, very professional!"},
+    {"customerName": "Niluka Ranawaka", "avatarUrl": "https://randomuser.me/api/portraits/women/41.jpg", "rating": 4.9, "daysAgo": 4, "text": "Excellent exterior painting. Clean work and great colors."}
+  ],
+  "painter-2": [
+    {"customerName": "Ajith Karunaratne", "avatarUrl": "https://randomuser.me/api/portraits/men/49.jpg", "rating": 4.8, "daysAgo": 2, "text": "Sajeewani did our living room. Beautiful results."}
+  ],
+  "painter-3": [
+    {"customerName": "Chandrika Wickremasinghe", "avatarUrl": "https://randomuser.me/api/portraits/women/32.jpg", "rating": 5.0, "daysAgo": 6, "text": "Nuwan's color suggestions were perfect. Interior looks amazing!"}
+  ],
+  "painter-4": [
+    {"customerName": "Sanjeeva Dissanayake", "avatarUrl": "https://randomuser.me/api/portraits/men/69.jpg", "rating": 4.7, "daysAgo": 3, "text": "Dilhani did touch-ups and repainting. Very neat work."}
+  ],
+  "painter-5": [
+    {"customerName": "Yasodara Peiris", "avatarUrl": "https://randomuser.me/api/portraits/women/58.jpg", "rating": 4.6, "daysAgo": 7, "text": "Lasantha painted our bedroom. Good quality, fair price."}
+  ]
+}
