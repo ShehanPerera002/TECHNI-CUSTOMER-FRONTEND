@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/verification_screen.dart';
@@ -22,15 +23,21 @@ Future<void> main() async {
     debugPrint('[Firebase] initializeApp unexpected error: $error');
   }
 
+  await _requestPermissions();
+
   runApp(const TechniApp());
 }
 
 Future<void> _requestPermissions() async {
-  await Future.wait([
-    Permission.microphone.request(),
-    Permission.camera.request(),
-    Permission.locationWhenInUse.request(),
-  ]);
+  try {
+    await [
+      Permission.microphone,
+      Permission.camera,
+      Permission.locationWhenInUse,
+    ].request();
+  } on PlatformException catch (error) {
+    debugPrint('[Permissions] request skipped: ${error.message}');
+  }
 }
 
 class TechniApp extends StatelessWidget {
