@@ -32,6 +32,11 @@ dependencies:
   http: ^1.2.2
   firebase_core: ^3.13.0
   firebase_auth: ^5.5.3
+  permission_handler: ^11.3.1
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  speech_to_text: ^7.0.0
+  flutter_svg: ^2.0.9
   flutter:
     sdk: flutter
 
@@ -42,8 +47,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  flutter_svg: ^2.0.9
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
