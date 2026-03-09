@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/customer_api.dart';
@@ -25,6 +26,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   bool _isFormValid = false;
   bool _isSaving = false;
+  bool _isPickingImage = false;
   String? _errorText;
   bool _argsLoaded = false;
 
@@ -85,16 +87,34 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   // Image Picker
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
+    if (_isPickingImage) return;
 
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    setState(() {
+      _isPickingImage = true;
+    });
 
-    if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-      _validateForm();
+      if (!mounted) return;
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+        _validateForm();
+      }
+    } on PlatformException catch (error) {
+      debugPrint('[ImagePicker] pickImage skipped: ${error.message}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+        });
+      } else {
+        _isPickingImage = false;
+      }
     }
   }
 
@@ -192,7 +212,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                         child: Stack(
                           children: [
                             GestureDetector(
-                              onTap: _pickImage,
+                              onTap: _isPickingImage ? null : _pickImage,
                               child: Container(
                                 width: 140,
                                 height: 140,
@@ -222,7 +242,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                               bottom: 5,
                               right: 5,
                               child: GestureDetector(
-                                onTap: _pickImage,
+                                onTap: _isPickingImage ? null : _pickImage,
                                 child: Container(
                                   width: 40,
                                   height: 40,
