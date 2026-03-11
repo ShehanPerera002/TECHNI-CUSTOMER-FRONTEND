@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../screens/create_profile_screen.dart';
-import '../screens/main_screen.dart';
 
 class SuccessCard extends StatelessWidget {
   const SuccessCard({super.key});
@@ -70,33 +69,6 @@ class SuccessCard extends StatelessWidget {
             "assets/images/verification_page2.png",
             height: 180,
             fit: BoxFit.contain,
-          ),
-
-          const SizedBox(height: 24),
-
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MainScreen()),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                "Go to Home",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
           ),
         ],
       ),
