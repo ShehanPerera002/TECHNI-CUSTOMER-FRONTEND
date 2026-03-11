@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../core/customer_api.dart';
+import '../core/cloudinary_service.dart';
 
 class CreateProfileScreen extends StatefulWidget {
   const CreateProfileScreen({super.key});
@@ -25,6 +28,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   bool _isFormValid = false;
   bool _isSaving = false;
+  bool _isPickingImage = false;
   String? _errorText;
   bool _argsLoaded = false;
 
@@ -85,16 +89,34 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   // Image Picker
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
+    if (_isPickingImage) return;
 
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    setState(() {
+      _isPickingImage = true;
+    });
 
-    if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-      _validateForm();
+      if (!mounted) return;
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+        _validateForm();
+      }
+    } on PlatformException catch (error) {
+      debugPrint('[ImagePicker] pickImage skipped: ${error.message}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+        });
+      } else {
+        _isPickingImage = false;
+      }
     }
   }
 
@@ -114,23 +136,45 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     });
 
     try {
-      await CustomerApi.createProfile(
-        phone: _phone!,
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        birthDate: _birthDateController.text.trim(),
-        address: _addressController.text.trim(),
-        profileImage: _selectedImage?.path,
+      final authUser = FirebaseAuth.instance.currentUser;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final uid = authUser?.uid ?? 'uid_$now';
+      final imageUrl = await CloudinaryService.uploadCustomerImage(
+        _selectedImage!,
       );
+
+      final profileData = <String, dynamic>{
+        'ProfileImage': imageUrl,
+        'address': _addressController.text.trim(),
+        'birthDate': selectedDate != null
+            ? '${selectedDate!.year.toString().padLeft(4, '0')}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}'
+            : _birthDateController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'email': _emailController.text.trim(),
+        'fullName': _nameController.text.trim(),
+        'isVerified': true,
+        'latitude': 0.0,
+        'longitude': 0.0,
+        'phone': _phone!,
+        'role': 'customer',
+        'uid': uid,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('customers')
+          .doc(uid)
+          .set(profileData, SetOptions(merge: true));
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile saved successfully')),
       );
-    } on ApiException catch (error) {
+
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    } on FirebaseException catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorText = error.message;
+        _errorText = error.message ?? 'Failed to save profile. Please try again.';
       });
     } catch (_) {
       if (!mounted) return;
@@ -192,7 +236,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                         child: Stack(
                           children: [
                             GestureDetector(
-                              onTap: _pickImage,
+                              onTap: _isPickingImage ? null : _pickImage,
                               child: Container(
                                 width: 140,
                                 height: 140,
@@ -222,7 +266,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                               bottom: 5,
                               right: 5,
                               child: GestureDetector(
-                                onTap: _pickImage,
+                                onTap: _isPickingImage ? null : _pickImage,
                                 child: Container(
                                   width: 40,
                                   height: 40,

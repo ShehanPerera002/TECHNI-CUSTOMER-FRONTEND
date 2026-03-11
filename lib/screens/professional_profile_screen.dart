@@ -6,14 +6,17 @@ import 'package:flutter/services.dart';
 import '../models/professional.dart';
 import '../models/professional_profile_data.dart';
 import '../models/review.dart';
+import 'connecting_worker_screen.dart';
 
 /// Full profile screen for a selected professional.
 class ProfessionalProfileScreen extends StatefulWidget {
   final Professional professional;
+  final String serviceTitle;
 
   const ProfessionalProfileScreen({
     super.key,
     required this.professional,
+    required this.serviceTitle,
   });
 
   @override
@@ -33,8 +36,9 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
 
   Future<void> _loadReviews() async {
     try {
-      final json =
-          await rootBundle.loadString('assets/data/professional_reviews.json');
+      final json = await rootBundle.loadString(
+        'assets/data/professional_reviews.json',
+      );
       final map = jsonDecode(json) as Map<String, dynamic>;
       final list = map[widget.professional.id] as List<dynamic>?;
       if (list != null) {
@@ -130,11 +134,14 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ...List.generate(5, (i) => Icon(
-                  i < p.rating.floor() ? Icons.star : Icons.star_border,
-                  size: 20,
-                  color: Colors.amber.shade700,
-                )),
+            ...List.generate(
+              5,
+              (i) => Icon(
+                i < p.rating.floor() ? Icons.star : Icons.star_border,
+                size: 20,
+                color: Colors.amber.shade700,
+              ),
+            ),
             const SizedBox(width: 6),
             Text(
               '${p.rating} (247 reviews)',
@@ -149,7 +156,17 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
               child: SizedBox(
                 height: 36,
                 child: FilledButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ConnectingWorkerScreen(
+                          professional: p,
+                          serviceTitle: widget.serviceTitle,
+                        ),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.phone, size: 14),
                   label: const Text(
                     'Connect Now',
@@ -158,9 +175,13 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 0,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -172,16 +193,17 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.calendar_today, size: 14),
-                  label: const Text(
-                    'Schedule',
-                    style: TextStyle(fontSize: 12),
-                  ),
+                  label: const Text('Schedule', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.black87,
                     side: const BorderSide(color: Colors.black87),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 0,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -216,15 +238,16 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
-                Icon(Icons.check_circle, size: 20, color: Colors.green.shade600),
+                Icon(
+                  Icons.check_circle,
+                  size: 20,
+                  color: Colors.green.shade600,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     s,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade800,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
                   ),
                 ),
               ],
@@ -242,7 +265,11 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
         const SizedBox(height: 12),
         _detailRow(Icons.school, 'Qualifications', profile.qualifications),
         const SizedBox(height: 12),
-        _detailRow(Icons.schedule, 'Avg. Response Time', profile.avgResponseTime),
+        _detailRow(
+          Icons.schedule,
+          'Avg. Response Time',
+          profile.avgResponseTime,
+        ),
       ],
     );
   }
@@ -268,10 +295,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           flex: 3,
           child: Text(
             value,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
             textAlign: TextAlign.end,
           ),
         ),
@@ -345,9 +369,11 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           const SizedBox(height: 16),
           if (!_reviewsLoaded)
             const Center(
-                child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator()))
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              ),
+            )
           else if (_reviews.isEmpty)
             Text(
               'No reviews yet.',
@@ -366,10 +392,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: NetworkImage(r.avatarUrl),
-          ),
+          CircleAvatar(radius: 20, backgroundImage: NetworkImage(r.avatarUrl)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -380,9 +403,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     ...List.generate(
                       5,
                       (i) => Icon(
-                        i < r.rating.floor()
-                            ? Icons.star
-                            : Icons.star_border,
+                        i < r.rating.floor() ? Icons.star : Icons.star_border,
                         size: 14,
                         color: Colors.amber.shade700,
                       ),
