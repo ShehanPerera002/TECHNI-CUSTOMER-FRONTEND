@@ -27,22 +27,54 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _stickyScrollThreshold = 120;
 
   static const List<_CarouselSlideData> _carouselSlides = [
-    _CarouselSlideData(Icons.bolt, "Emergency Support",
-        "Need urgent help? Get a professional at your door in one tap.", "24/7"),
-    _CarouselSlideData(Icons.star, "Top Rated Pros",
-        "Book verified experts with 4.8+ ratings.", "Popular"),
-    _CarouselSlideData(Icons.savings, "Best Prices",
-        "Transparent pricing with no hidden fees.", "Save"),
-    _CarouselSlideData(Icons.verified_user, "Verified Experts",
-        "All technicians are background-checked and certified.", "Trusted"),
-    _CarouselSlideData(Icons.schedule, "Same Day Service",
-        "Book now and get help as soon as today.", "Fast"),
-    _CarouselSlideData(Icons.local_offer, "Special Offers",
-        "Exclusive discounts for first-time customers.", "Deals"),
-    _CarouselSlideData(Icons.home_repair_service, "Full Home Services",
-        "From plumbing to painting—we do it all.", "Complete"),
-    _CarouselSlideData(Icons.thumb_up, "100% Satisfaction",
-        "Not happy? We'll make it right, guaranteed.", "Guarantee"),
+    _CarouselSlideData(
+      Icons.bolt,
+      "Emergency Support",
+      "Need urgent help? Get a professional at your door in one tap.",
+      "24/7",
+    ),
+    _CarouselSlideData(
+      Icons.star,
+      "Top Rated Pros",
+      "Book verified experts with 4.8+ ratings.",
+      "Popular",
+    ),
+    _CarouselSlideData(
+      Icons.savings,
+      "Best Prices",
+      "Transparent pricing with no hidden fees.",
+      "Save",
+    ),
+    _CarouselSlideData(
+      Icons.verified_user,
+      "Verified Experts",
+      "All technicians are background-checked and certified.",
+      "Trusted",
+    ),
+    _CarouselSlideData(
+      Icons.schedule,
+      "Same Day Service",
+      "Book now and get help as soon as today.",
+      "Fast",
+    ),
+    _CarouselSlideData(
+      Icons.local_offer,
+      "Special Offers",
+      "Exclusive discounts for first-time customers.",
+      "Deals",
+    ),
+    _CarouselSlideData(
+      Icons.home_repair_service,
+      "Full Home Services",
+      "From plumbing to painting—we do it all.",
+      "Complete",
+    ),
+    _CarouselSlideData(
+      Icons.thumb_up,
+      "100% Satisfaction",
+      "Not happy? We'll make it right, guaranteed.",
+      "Guarantee",
+    ),
   ];
 
   static const List<ServiceDetailData> _services = [
@@ -58,8 +90,15 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 200 / hr",
       materials: "At Cost",
       ctaText: "Find a Plumber",
-      issueHint: "Describe your plumbing issue... e.g. leaking pipe, clogged drain, toilet repair",
-      exampleIssues: ["Leaking pipe", "Clogged drain", "Water heater not working", "Toilet repair", "Low water pressure"],
+      issueHint:
+          "Describe your plumbing issue... e.g. leaking pipe, clogged drain, toilet repair",
+      exampleIssues: [
+        "Leaking pipe",
+        "Clogged drain",
+        "Water heater not working",
+        "Toilet repair",
+        "Low water pressure",
+      ],
     ),
     ServiceDetailData(
       icon: Icons.electrical_services,
@@ -73,8 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 250 / hr",
       materials: "At Cost",
       ctaText: "Find an Electrician",
-      issueHint: "Describe your electrical issue... e.g. wiring, outlet, lighting, fuse",
-      exampleIssues: ["Flickering lights", "Outlet not working", "Wiring repair", "Circuit breaker trips", "Light installation"],
+      issueHint:
+          "Describe your electrical issue... e.g. wiring, outlet, lighting, fuse",
+      exampleIssues: [
+        "Flickering lights",
+        "Outlet not working",
+        "Wiring repair",
+        "Circuit breaker trips",
+        "Light installation",
+      ],
     ),
     ServiceDetailData(
       icon: Icons.grass,
@@ -88,8 +134,15 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 180 / hr",
       materials: "At Cost",
       ctaText: "Find a Gardener",
-      issueHint: "Describe your garden needs... e.g. lawn mowing, pruning, landscaping",
-      exampleIssues: ["Lawn mowing", "Hedge pruning", "Weeding", "Garden design", "Plant care"],
+      issueHint:
+          "Describe your garden needs... e.g. lawn mowing, pruning, landscaping",
+      exampleIssues: [
+        "Lawn mowing",
+        "Hedge pruning",
+        "Weeding",
+        "Garden design",
+        "Plant care",
+      ],
     ),
     ServiceDetailData(
       icon: Icons.handyman,
@@ -103,8 +156,15 @@ class _HomeScreenState extends State<HomeScreen> {
       hourlyRate: "Rs 220 / hr",
       materials: "At Cost",
       ctaText: "Find a Carpenter",
-      issueHint: "Describe your carpentry need... e.g. furniture repair, door, cabinet",
-      exampleIssues: ["Furniture repair", "Door installation", "Cabinet repair", "Custom shelving", "Wood finishing"],
+      issueHint:
+          "Describe your carpentry need... e.g. furniture repair, door, cabinet",
+      exampleIssues: [
+        "Furniture repair",
+        "Door installation",
+        "Cabinet repair",
+        "Custom shelving",
+        "Wood finishing",
+      ],
     ),
     ServiceDetailData(
       icon: Icons.format_paint,
@@ -119,7 +179,13 @@ class _HomeScreenState extends State<HomeScreen> {
       materials: "At Cost",
       ctaText: "Find a Painter",
       issueHint: "Describe your painting need... e.g. room, exterior, touch-up",
-      exampleIssues: ["Interior room", "Exterior walls", "Touch-up", "Full repaint", "Color change"],
+      exampleIssues: [
+        "Interior room",
+        "Exterior walls",
+        "Touch-up",
+        "Full repaint",
+        "Color change",
+      ],
     ),
     ServiceDetailData(
       icon: Icons.ac_unit,
@@ -134,7 +200,13 @@ class _HomeScreenState extends State<HomeScreen> {
       materials: "At Cost",
       ctaText: "Find an AC Technician",
       issueHint: "Describe your AC issue... e.g. not cooling, leaking, noisy",
-      exampleIssues: ["Not cooling", "AC leaking", "Noisy unit", "Installation", "Gas recharge"],
+      exampleIssues: [
+        "Not cooling",
+        "AC leaking",
+        "Noisy unit",
+        "Installation",
+        "Gas recharge",
+      ],
     ),
     ServiceDetailData(
       icon: Icons.security,
@@ -149,7 +221,13 @@ class _HomeScreenState extends State<HomeScreen> {
       materials: "At Cost",
       ctaText: "Find an ELV Repairer",
       issueHint: "Describe your ELV issue... e.g. CCTV, alarm, doorbell",
-      exampleIssues: ["CCTV not working", "Alarm repair", "Doorbell install", "Camera setup", "System upgrade"],
+      exampleIssues: [
+        "CCTV not working",
+        "Alarm repair",
+        "Doorbell install",
+        "Camera setup",
+        "System upgrade",
+      ],
     ),
   ];
 
@@ -157,9 +235,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) return [];
     return _services
-        .where((s) =>
-            s.title.toLowerCase().contains(query) ||
-            s.description.toLowerCase().contains(query))
+        .where(
+          (s) =>
+              s.title.toLowerCase().contains(query) ||
+              s.description.toLowerCase().contains(query),
+        )
         .toList();
   }
 
@@ -171,8 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
-    final showSticky =
-        _scrollController.offset > _stickyScrollThreshold;
+    final showSticky = _scrollController.offset > _stickyScrollThreshold;
     if (showSticky != _showStickySearch) {
       setState(() => _showStickySearch = showSticky);
     }
@@ -284,20 +363,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        children: [
-          Image.asset(AppAssets.welcomeLogo, height: 36),
-          const SizedBox(width: 8),
-          const Text(
-            "TECHNI",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A8A),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(6, 0, 0, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Image.asset(
+          AppAssets.welcomeLogo,
+          height: 120,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }
@@ -420,6 +493,5 @@ class _CarouselSlideData {
   final String subtitle;
   final String badge;
 
-  const _CarouselSlideData(
-      this.icon, this.title, this.subtitle, this.badge);
+  const _CarouselSlideData(this.icon, this.title, this.subtitle, this.badge);
 }
