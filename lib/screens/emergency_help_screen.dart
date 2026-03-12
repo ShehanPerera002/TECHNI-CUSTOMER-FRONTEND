@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmergencyHelpScreen extends StatefulWidget {
   final String serviceTitle;
@@ -11,6 +14,18 @@ class EmergencyHelpScreen extends StatefulWidget {
 
 class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
   String _selectedHelp = 'Police';
+
+  Future<void> _dialEmergencyNumber(String number) async {
+    final String cleanNumber = number.replaceAll(RegExp(r'[^0-9]'), '');
+    final Uri uri = Uri.parse('tel:$cleanNumber');
+    final bool launched = await launchUrl(uri);
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to open dialer for $cleanNumber.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +67,10 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                     label: 'Police',
                     icon: Icons.local_police_outlined,
                     selected: _selectedHelp == 'Police',
-                    onTap: () => setState(() => _selectedHelp = 'Police'),
+                    onTap: () {
+                      setState(() => _selectedHelp = 'Police');
+                      unawaited(_dialEmergencyNumber('119'));
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -61,7 +79,10 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                     label: 'Ambulance',
                     icon: Icons.add_box_outlined,
                     selected: _selectedHelp == 'Ambulance',
-                    onTap: () => setState(() => _selectedHelp = 'Ambulance'),
+                    onTap: () {
+                      setState(() => _selectedHelp = 'Ambulance');
+                      unawaited(_dialEmergencyNumber('1990'));
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -70,7 +91,10 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                     label: 'Fire',
                     icon: Icons.fire_truck_outlined,
                     selected: _selectedHelp == 'Fire',
-                    onTap: () => setState(() => _selectedHelp = 'Fire'),
+                    onTap: () {
+                      setState(() => _selectedHelp = 'Fire');
+                      unawaited(_dialEmergencyNumber('110'));
+                    },
                   ),
                 ),
               ],
