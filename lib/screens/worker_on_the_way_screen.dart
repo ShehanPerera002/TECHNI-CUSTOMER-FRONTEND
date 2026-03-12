@@ -92,20 +92,35 @@ class WorkerOnTheWayScreen extends StatelessWidget {
           ),
           Positioned(
             right: 18,
-            bottom: 330,
-            child: FloatingActionButton(
-              heroTag: 'emergencyFab',
-              backgroundColor: const Color(0xFFFF2A2A),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        EmergencyHelpScreen(serviceTitle: serviceTitle),
+            bottom: 355,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2A2A).withValues(alpha: 0.35),
+                    blurRadius: 14,
+                    spreadRadius: 2,
                   ),
-                );
-              },
-              child: const Icon(Icons.sos, color: Colors.white),
+                ],
+              ),
+              child: FloatingActionButton(
+                heroTag: 'emergencyFab',
+                backgroundColor: const Color(0xFFFF2A2A),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          EmergencyHelpScreen(serviceTitle: serviceTitle),
+                    ),
+                  );
+                },
+                child: const Icon(
+                  Icons.notifications_active,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
           Positioned(
