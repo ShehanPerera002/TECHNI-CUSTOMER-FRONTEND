@@ -108,7 +108,10 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color techniBrand = Color(0xFF2563EB);
+
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -123,7 +126,11 @@ class _SignInScreenState extends State<SignInScreen> {
 
               const Text(
                 "Enter your mobile number",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
               ),
 
               const SizedBox(height: 15),
@@ -136,25 +143,44 @@ class _SignInScreenState extends State<SignInScreen> {
                   LengthLimitingTextInputFormatter(9),
                 ],
                 decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
                   prefixText: "+94 ",
+                  prefixStyle: const TextStyle(
+                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w500,
+                  ),
                   hintText: "77XXXXXXX",
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
                   errorText: _phoneController.text.isEmpty || _isValid
                       ? null
                       : "Invalid Sri Lankan number",
+                  errorStyle: const TextStyle(color: Color(0xFFDC2626)),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _phoneController.text.isEmpty || _isValid
-                          ? Colors.grey
-                          : Colors.red,
+                          ? const Color(0xFFCBD5E1)
+                          : const Color(0xFFDC2626),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _phoneController.text.isEmpty || _isValid
-                          ? Colors.blue
-                          : Colors.red,
+                          ? techniBrand
+                          : const Color(0xFFDC2626),
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFDC2626),
                       width: 2,
                     ),
                   ),
@@ -168,7 +194,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorText!,
-                    style: const TextStyle(color: Colors.red),
+                    style: const TextStyle(color: Color(0xFFDC2626)),
                   ),
                 ),
 
