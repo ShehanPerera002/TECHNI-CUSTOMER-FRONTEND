@@ -75,6 +75,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
         _focusNodes[index + 1].requestFocus();
       } else {
         _focusNodes[index].unfocus();
+        // Auto-submit when all 6 digits are entered
+        Future.microtask(() {
+          _checkOtpComplete();
+          if (_isOtpComplete) _continueToNext();
+        });
+        return;
       }
     } else {
       // Move back on delete
@@ -248,7 +254,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
                       maxLength: 1,
+                      textInputAction: index == 5
+                          ? TextInputAction.done
+                          : TextInputAction.next,
                       onChanged: (value) => _onOtpChanged(value, index),
+                      onSubmitted: index == 5 ? (_) => _continueToNext() : null,
                       decoration: InputDecoration(
                         counterText: "",
                         enabledBorder: OutlineInputBorder(
