@@ -6,16 +6,14 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/professional.dart';
+import 'connecting_worker_screen.dart';
 import 'professional_profile_screen.dart';
 
 /// Screen showing map with available professionals and booking options.
 class FindProfessionalScreen extends StatefulWidget {
   final String serviceTitle;
 
-  const FindProfessionalScreen({
-    super.key,
-    required this.serviceTitle,
-  });
+  const FindProfessionalScreen({super.key, required this.serviceTitle});
 
   @override
   State<FindProfessionalScreen> createState() => _FindProfessionalScreenState();
@@ -30,7 +28,13 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   Timer? _movementTimer;
   final Random _random = Random();
   static const _movingIndices = [0, 2]; // Saman & Kamala get live movement
-  static const _timeOptions = ['10 min', '12 min', '15 min', '18 min', '20 min'];
+  static const _timeOptions = [
+    '10 min',
+    '12 min',
+    '15 min',
+    '18 min',
+    '20 min',
+  ];
 
   static const _paymentOptions = ['Cash', 'Card payment'];
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
@@ -38,8 +42,33 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   @override
   void initState() {
     super.initState();
-    _professionals = List.from(Professional.getDummyForCategory(widget.serviceTitle));
+    _professionals = List.from(
+      Professional.getDummyForCategory(widget.serviceTitle),
+    );
+    _selectedProfessional = _professionals.isNotEmpty
+        ? _professionals.first
+        : null;
     _startLiveMovement();
+  }
+
+  void _connectNow() {
+    final selected = _selectedProfessional;
+    if (selected == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No professional available right now.')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ConnectingWorkerScreen(
+          professional: selected,
+          serviceTitle: widget.serviceTitle,
+        ),
+      ),
+    );
   }
 
   void _startLiveMovement() {
@@ -51,7 +80,8 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
           final p = _professionals[i];
           final delta = 0.0008 * (_random.nextDouble() - 0.5) * 2;
           final newLat = p.location.latitude + delta;
-          final newLng = p.location.longitude + delta * (_random.nextBool() ? 1 : -1);
+          final newLng =
+              p.location.longitude + delta * (_random.nextBool() ? 1 : -1);
           final newTime = _timeOptions[_random.nextInt(_timeOptions.length)];
           _professionals[i] = p.copyWith(
             location: LatLng(newLat, newLng),
@@ -92,12 +122,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
       body: Stack(
         children: [
           _buildMap(),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomSheet(),
-          ),
+          Positioned(left: 0, right: 0, bottom: 0, child: _buildBottomSheet()),
         ],
       ),
     );
@@ -113,10 +138,13 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+          urlTemplate:
+              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
         ),
         MarkerLayer(
-          markers: _professionals.map((p) => Marker(
+          markers: _professionals
+              .map(
+                (p) => Marker(
                   point: p.location,
                   width: 44,
                   height: 44,
@@ -145,14 +173,15 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                           fit: BoxFit.cover,
                           width: 40,
                           height: 40,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey.shade300,
-                          ),
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(color: Colors.grey.shade300),
                         ),
                       ),
                     ),
                   ),
-                )).toList(),
+                ),
+              )
+              .toList(),
         ),
       ],
     );
@@ -243,8 +272,11 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star,
-                                    size: 10, color: Colors.amber.shade700),
+                                Icon(
+                                  Icons.star,
+                                  size: 10,
+                                  color: Colors.amber.shade700,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
                                   '${p.rating}/5',
@@ -274,6 +306,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                             MaterialPageRoute(
                               builder: (context) => ProfessionalProfileScreen(
                                 professional: _selectedProfessional!,
+                                serviceTitle: widget.serviceTitle,
                               ),
                             ),
                           );
@@ -285,12 +318,18 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: _selectedProfessional != null ? const Color(0xFFFBBF24) : Colors.grey.shade300,
-                    foregroundColor: _selectedProfessional != null ? Colors.black87 : Colors.grey.shade600,
+                    backgroundColor: _selectedProfessional != null
+                        ? const Color(0xFFFBBF24)
+                        : Colors.grey.shade300,
+                    foregroundColor: _selectedProfessional != null
+                        ? Colors.black87
+                        : Colors.grey.shade600,
                     disabledBackgroundColor: Colors.grey.shade300,
                     disabledForegroundColor: Colors.grey.shade600,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -325,19 +364,22 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                     child: SizedBox(
                       height: 48,
                       child: FilledButton.icon(
-                        onPressed: () {
-                          // TODO: Connect now
-                        },
+                        onPressed: _connectNow,
                         icon: const Icon(Icons.phone, size: 18),
                         label: const Text(
                           'Connect Now',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF2563EB),
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -353,12 +395,17 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                         icon: const Icon(Icons.calendar_today, size: 18),
                         label: const Text(
                           'Schedule',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey.shade800,
                           side: BorderSide(color: Colors.grey.shade400),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -392,17 +439,19 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
           isDense: true,
           icon: const Icon(Icons.keyboard_arrow_down, size: 20),
           items: items
-              .map((e) => DropdownMenuItem(
-                    value: e,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon, size: 14, color: Colors.grey.shade700),
-                        const SizedBox(width: 6),
-                        Text(e, style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  ))
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 14, color: Colors.grey.shade700),
+                      const SizedBox(width: 6),
+                      Text(e, style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),

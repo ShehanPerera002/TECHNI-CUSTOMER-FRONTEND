@@ -3,7 +3,7 @@ import 'home_screen.dart';
 import 'activities_screen.dart';
 import 'bookings_screen.dart';
 import 'notifications_screen.dart';
-import 'create_profile_screen.dart';
+import 'customer_profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,7 +20,7 @@ class _MainScreenState extends State<MainScreen> {
     ActivitiesScreen(),
     BookingsScreen(),
     NotificationsScreen(),
-    CreateProfileScreen(),
+    CustomerProfileScreen(),
   ];
 
   @override
