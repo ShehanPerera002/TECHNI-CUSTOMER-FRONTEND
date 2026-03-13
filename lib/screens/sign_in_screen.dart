@@ -108,77 +108,114 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
+    const Color techniBrand = Color(0xFF2563EB);
 
-              Center(child: Image.asset(AppAssets.welcomeLogo, height: 180)),
+    return PopScope(
+      canPop: _phoneController.text.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _phoneController.clear();
+          setState(() {});
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 40),
 
-              const SizedBox(height: 40),
+                Center(child: Image.asset(AppAssets.welcomeLogo, height: 180)),
 
-              const Text(
-                "Enter your mobile number",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
+                const SizedBox(height: 40),
 
-              const SizedBox(height: 15),
-
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(9),
-                ],
-                decoration: InputDecoration(
-                  prefixText: "+94 ",
-                  hintText: "77XXXXXXX",
-                  errorText: _phoneController.text.isEmpty || _isValid
-                      ? null
-                      : "Invalid Sri Lankan number",
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: _phoneController.text.isEmpty || _isValid
-                          ? Colors.grey
-                          : Colors.red,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: _phoneController.text.isEmpty || _isValid
-                          ? Colors.blue
-                          : Colors.red,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              if (_errorText != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    _errorText!,
-                    style: const TextStyle(color: Colors.red),
+                const Text(
+                  "Enter your mobile number",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
 
-              PrimaryButton(
-                text: _isSubmitting ? 'Sending...' : 'Continue',
-                onPressed: _isValid && !_isSubmitting
-                    ? _goToVerification
-                    : null,
-              ),
-            ],
+                const SizedBox(height: 15),
+
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _goToVerification(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(9),
+                  ],
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixText: "+94 ",
+                    prefixStyle: const TextStyle(
+                      color: Color(0xFF1E293B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    hintText: "77XXXXXXX",
+                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                    errorText: _phoneController.text.isEmpty || _isValid
+                        ? null
+                        : "Invalid Sri Lankan number",
+                    errorStyle: const TextStyle(color: Color(0xFFDC2626)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _phoneController.text.isEmpty || _isValid
+                            ? const Color(0xFFCBD5E1)
+                            : const Color(0xFFDC2626),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _phoneController.text.isEmpty || _isValid
+                            ? techniBrand
+                            : const Color(0xFFDC2626),
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFDC2626),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                if (_errorText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      _errorText!,
+                      style: const TextStyle(color: Color(0xFFDC2626)),
+                    ),
+                  ),
+
+                PrimaryButton(
+                  text: _isSubmitting ? 'Sending...' : 'Continue',
+                  onPressed: _isValid && !_isSubmitting
+                      ? _goToVerification
+                      : null,
+                ),
+              ],
+            ),
           ),
         ),
       ),
