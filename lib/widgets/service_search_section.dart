@@ -26,15 +26,14 @@ class ServiceSearchSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSearchBar(),
-        if (hasQuery) ...[
-          const SizedBox(height: 8),
-          _buildDropdown(),
-        ],
+        if (hasQuery) ...[const SizedBox(height: 8), _buildDropdown()],
       ],
     );
   }
 
   Widget _buildSearchBar() {
+    final hasQuery = controller.text.trim().isNotEmpty;
+
     return Container(
       height: 50,
       decoration: BoxDecoration(
@@ -50,6 +49,16 @@ class ServiceSearchSection extends StatelessWidget {
           hintText: "Search for a service...",
           hintStyle: TextStyle(color: Colors.grey.shade600),
           prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+          suffixIcon: hasQuery
+              ? IconButton(
+                  icon: Icon(Icons.close, color: Colors.grey.shade600),
+                  onPressed: () {
+                    controller.clear();
+                    focusNode.unfocus();
+                    onChanged();
+                  },
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
@@ -74,10 +83,7 @@ class ServiceSearchSection extends StatelessWidget {
                 child: Center(
                   child: Text(
                     "No results found",
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 15, color: Colors.black54),
                   ),
                 ),
               )

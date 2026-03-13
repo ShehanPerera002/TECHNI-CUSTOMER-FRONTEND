@@ -238,9 +238,20 @@ class _HomeScreenState extends State<HomeScreen> {
         .where(
           (s) =>
               s.title.toLowerCase().contains(query) ||
-              s.description.toLowerCase().contains(query),
+              s.description.toLowerCase().contains(query) ||
+              s.fullDescription.toLowerCase().contains(query) ||
+              s.exampleIssues.any(
+                (issue) => issue.toLowerCase().contains(query),
+              ),
         )
         .toList();
+  }
+
+  bool get _isSearching => _searchController.text.trim().isNotEmpty;
+
+  List<ServiceDetailData> get _gridServices {
+    if (!_isSearching) return _services;
+    return _filteredServices;
   }
 
   @override
@@ -302,61 +313,71 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: Stack(
-                children: [
-                  SingleChildScrollView(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "How Can We Help Today?",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+    return PopScope(
+      canPop: !_isSearching,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _clearSearchAndClose();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: Stack(
+                  children: [
+                    SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "How Can We Help Today?",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        ServiceSearchSection(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          filteredServices: _filteredServices,
-                          onChanged: () => setState(() {}),
-                          onServiceSelected: _onServiceSelected,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildCarousel(),
-                        const SizedBox(height: 12),
-                        CarouselIndicators(
-                          pageController: _carouselController,
-                          itemCount: _carouselSlides.length,
-                        ),
-                        const SizedBox(height: 28),
-                        _buildServicesSection(),
-                        const SizedBox(height: 100),
-                      ],
+                          const SizedBox(height: 20),
+                          ServiceSearchSection(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            filteredServices: _filteredServices,
+                            onChanged: () => setState(() {}),
+                            onServiceSelected: _onServiceSelected,
+                          ),
+                          const SizedBox(height: 24),
+                          if (!_isSearching) ...[
+                            _buildCarousel(),
+                            const SizedBox(height: 12),
+                            CarouselIndicators(
+                              pageController: _carouselController,
+                              itemCount: _carouselSlides.length,
+                            ),
+                            const SizedBox(height: 28),
+                          ],
+                          _buildServicesSection(),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (_showStickySearch) _buildStickySearchOverlay(),
-                ],
+                    if (_showStickySearch) _buildStickySearchOverlay(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: const Color(0xFF2563EB),
-        child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {},
+          backgroundColor: const Color(0xFF2563EB),
+          child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
+        ),
       ),
     );
   }
@@ -466,9 +487,9 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
-          itemCount: _services.length,
+          itemCount: _gridServices.length,
           itemBuilder: (context, index) {
-            final item = _services[index];
+            final item = _gridServices[index];
             return ServiceCard(
               icon: item.icon,
               title: item.title,
