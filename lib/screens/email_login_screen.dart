@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class EmailLoginScreen extends StatefulWidget {
@@ -71,7 +72,30 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
       await _ensureFirebaseAuthAccount(email, password);
 
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+
+      // Check if customer profile already exists
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('customers')
+            .doc(user.uid)
+            .get();
+
+        if (!mounted) return;
+
+        if (doc.exists) {
+          // Profile exists → go to home
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        } else {
+          // No profile → go to create profile
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/createProfile',
+            (route) => false,
+            arguments: {'phone': '', 'email': email},
+          );
+        }
+      }
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       setState(() {
