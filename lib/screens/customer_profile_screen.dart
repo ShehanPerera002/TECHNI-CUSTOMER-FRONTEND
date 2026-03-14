@@ -146,16 +146,12 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           }
 
           if (snapshot.hasError) {
-            return const Center(
-              child: Text('Failed to load profile'),
-            );
+            return const Center(child: Text('Failed to load profile'));
           }
 
           final data = snapshot.data;
           if (data == null || data.isEmpty) {
-            return const Center(
-              child: Text('Profile not found'),
-            );
+            return const Center(child: Text('Profile not found'));
           }
 
           final image = _profileImageProvider(data['ProfileImage'] as String?);
@@ -176,8 +172,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       : null,
                 ),
                 const SizedBox(height: 28),
-                _infoTile(label: 'Name', value: name?.isNotEmpty == true ? name! : '-'),
-                _infoTile(label: 'Email', value: email?.isNotEmpty == true ? email! : '-'),
+                _infoTile(
+                  label: 'Name',
+                  value: name?.isNotEmpty == true ? name! : '-',
+                ),
+                _infoTile(
+                  label: 'Email',
+                  value: email?.isNotEmpty == true ? email! : '-',
+                ),
                 _infoTile(
                   label: 'Birthday',
                   value: birthDate?.isNotEmpty == true ? birthDate! : '-',

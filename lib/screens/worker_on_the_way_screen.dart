@@ -145,73 +145,38 @@ class _TripSheet extends StatefulWidget {
   final Professional professional;
   final String serviceTitle;
 
-  const _TripSheet({
-    required this.professional,
-    required this.serviceTitle,
-  });
+  const _TripSheet({required this.professional, required this.serviceTitle});
 
   @override
   State<_TripSheet> createState() => _TripSheetState();
 }
 
 class _TripSheetState extends State<_TripSheet> {
-  static const _paymentOptions = ['Cash', 'Card payment'];
+  static const _paymentOptions = ['Cash'];
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
-
   String _paymentMethod = _paymentOptions.first;
   String _language = _languageOptions.first;
 
-  Future<void> _confirmWork() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Confirm Work',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Confirm that ${widget.professional.name} has completed the work to your satisfaction?',
-          style: const TextStyle(fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Not Yet',
-                style: TextStyle(color: Colors.grey.shade600)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF22C55E)),
-            child: const Text('Yes, Confirm'),
-          ),
-        ],
+  void _confirmWork() {
+    BookingService.instance.completeBooking(
+      BookingService.instance.bookings
+          .firstWhere(
+            (b) =>
+                b.serviceTitle == widget.serviceTitle &&
+                b.workerName == widget.professional.name,
+            orElse: () => BookingService.instance.bookings.first,
+          )
+          .id,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${widget.professional.name} has completed the work!'),
+        backgroundColor: const Color(0xFF22C55E),
       ),
     );
 
-    if (confirmed == true && mounted) {
-      // Mark the booking as completed
-      final bookings = BookingService.instance.bookings;
-      for (final b in bookings) {
-        if (b.serviceTitle == widget.serviceTitle &&
-            b.workerName == widget.professional.name) {
-          BookingService.instance.completeBooking(b.id);
-          break;
-        }
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Work with ${widget.professional.name} confirmed! Thank you.',
-          ),
-          backgroundColor: const Color(0xFF22C55E),
-        ),
-      );
-      // Navigate back to home
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    }
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -231,6 +196,7 @@ class _TripSheetState extends State<_TripSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Status header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -250,7 +216,7 @@ class _TripSheetState extends State<_TripSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${widget.professional.timeToBook}...',
+                  widget.professional.timeToBook,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -264,6 +230,7 @@ class _TripSheetState extends State<_TripSheet> {
             padding: const EdgeInsets.all(14),
             child: Column(
               children: [
+                // Worker info row
                 Row(
                   children: [
                     CircleAvatar(
@@ -331,41 +298,39 @@ class _TripSheetState extends State<_TripSheet> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                // Cash Only badge
                 Container(
-                  width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 10,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFE1E1E1)),
+                    color: const Color(0xFFF0FDF4),
+                    border: Border.all(
+                      color: const Color(0xFF22C55E).withOpacity(0.4),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Column(
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _PriceRow(label: 'Total price', value: 'Rs 1500'),
-                      SizedBox(height: 8),
-                      _PriceRow(label: 'Hourly Rate', value: 'Rs 200 / hr'),
-                      SizedBox(height: 8),
-                      _PriceRow(label: 'Materials', value: 'At Cost'),
+                      Icon(Icons.payments, size: 18, color: Color(0xFF22C55E)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Cash Only',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF22C55E),
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Language dropdown
                 Row(
                   children: [
-                    Expanded(
-                      child: _SelectionDropdown(
-                        icon: Icons.payments,
-                        value: _paymentMethod,
-                        items: _paymentOptions,
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _paymentMethod = value);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: _SelectionDropdown(
                         icon: Icons.language,
@@ -380,6 +345,7 @@ class _TripSheetState extends State<_TripSheet> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                // Confirm button
                 SizedBox(
                   height: 48,
                   width: double.infinity,
@@ -394,7 +360,7 @@ class _TripSheetState extends State<_TripSheet> {
                       ),
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
+                      backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -408,24 +374,6 @@ class _TripSheetState extends State<_TripSheet> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PriceRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _PriceRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(label, style: TextStyle(color: Colors.grey.shade700)),
-        const Spacer(),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-      ],
     );
   }
 }

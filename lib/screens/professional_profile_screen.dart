@@ -148,7 +148,6 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             ),
           ],
         ),
-
       ],
     );
   }
