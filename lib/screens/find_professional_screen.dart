@@ -7,7 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/professional.dart';
 import 'connecting_worker_screen.dart';
-import 'professional_profile_screen.dart';
+import 'scheduled_booking_screen.dart';
 
 /// Screen showing map with available professionals and booking options.
 class FindProfessionalScreen extends StatefulWidget {
@@ -22,7 +22,6 @@ class FindProfessionalScreen extends StatefulWidget {
 class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   static const _userLocation = LatLng(6.9271, 79.8612);
   late List<Professional> _professionals;
-  Professional? _selectedProfessional;
   String _paymentMethod = 'Cash';
   String _language = 'Sinhala';
   Timer? _movementTimer;
@@ -45,17 +44,13 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
     _professionals = List.from(
       Professional.getDummyForCategory(widget.serviceTitle),
     );
-    _selectedProfessional = _professionals.isNotEmpty
-        ? _professionals.first
-        : null;
     _startLiveMovement();
   }
 
-  void _connectNow() {
-    final selected = _selectedProfessional;
-    if (selected == null) {
+  void _findWorker() {
+    if (_professionals.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No professional available right now.')),
+        const SnackBar(content: Text('No professionals available right now.')),
       );
       return;
     }
@@ -64,11 +59,128 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ConnectingWorkerScreen(
-          professional: selected,
+          professionals: _professionals,
           serviceTitle: widget.serviceTitle,
         ),
       ),
     );
+  }
+
+  Future<void> _scheduleWorker() async {
+    if (_professionals.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No professionals available right now.')),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 90)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF2563EB),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            onSurface: Colors.black,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF2563EB),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            onSurface: Colors.black,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+
+    if (pickedTime == null || !mounted) return;
+
+    final formattedDate =
+        '${pickedDate.day}/${pickedDate.month}/${pickedDate.year}';
+    final formattedTime = pickedTime.format(context);
+
+    if (!mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Schedule Worker',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Service: ${widget.serviceTitle}',
+              style: const TextStyle(fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+            Row(children: [
+              const Icon(Icons.calendar_today,
+                  size: 16, color: Color(0xFF2563EB)),
+              const SizedBox(width: 8),
+              Text(formattedDate, style: const TextStyle(fontSize: 15)),
+            ]),
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.access_time,
+                  size: 16, color: Color(0xFF2563EB)),
+              const SizedBox(width: 8),
+              Text(formattedTime, style: const TextStyle(fontSize: 15)),
+            ]),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB)),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ScheduledBookingScreen(
+            serviceTitle: widget.serviceTitle,
+            scheduledDate: formattedDate,
+            scheduledTime: formattedTime,
+            availableWorkers: _professionals,
+          ),
+        ),
+      );
+    }
   }
 
   void _startLiveMovement() {
@@ -148,15 +260,11 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                   point: p.location,
                   width: 44,
                   height: 44,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedProfessional = p),
-                    child: Container(
+                  child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: _selectedProfessional?.id == p.id
-                              ? const Color(0xFF2563EB)
-                              : Colors.white,
+                          color: Colors.white,
                           width: 2,
                         ),
                         boxShadow: [
@@ -178,7 +286,6 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                         ),
                       ),
                     ),
-                  ),
                 ),
               )
               .toList(),
@@ -208,129 +315,27 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                height: 140,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _professionals.length,
-                  itemBuilder: (context, index) {
-                    final p = _professionals[index];
-                    final isSelected = _selectedProfessional?.id == p.id;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedProfessional = p),
-                      child: Container(
-                        width: 100,
-                        margin: EdgeInsets.only(
-                          right: index < _professionals.length - 1 ? 12 : 0,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.grey.shade200
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF2563EB)
-                                : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              p.timeToBook,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundImage: NetworkImage(p.avatarUrl),
-                              onBackgroundImageError: (object, stackTrace) {},
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              p.name,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 0),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  size: 10,
-                                  color: Colors.amber.shade700,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  '${p.rating}/5',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${_professionals.length} workers available nearby. '
+                        'The first worker to accept your request will be assigned.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.blue.shade900,
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 46,
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _selectedProfessional != null
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProfessionalProfileScreen(
-                                professional: _selectedProfessional!,
-                                serviceTitle: widget.serviceTitle,
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                  icon: const Icon(Icons.person_outline, size: 18),
-                  label: const Text(
-                    'Check Profile',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _selectedProfessional != null
-                        ? const Color(0xFFFBBF24)
-                        : Colors.grey.shade300,
-                    foregroundColor: _selectedProfessional != null
-                        ? Colors.black87
-                        : Colors.grey.shade600,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    disabledForegroundColor: Colors.grey.shade600,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -364,18 +369,18 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                     child: SizedBox(
                       height: 48,
                       child: FilledButton.icon(
-                        onPressed: _connectNow,
-                        icon: const Icon(Icons.phone, size: 18),
+                        onPressed: _findWorker,
+                        icon: const Icon(Icons.search, size: 18),
                         label: const Text(
-                          'Connect Now',
+                          'Find a Worker Now',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
-                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xFFFBBF24),
+                          foregroundColor: Colors.black87,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -389,20 +394,18 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                     child: SizedBox(
                       height: 48,
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          // TODO: Schedule
-                        },
-                        icon: const Icon(Icons.calendar_today, size: 18),
+                        onPressed: _scheduleWorker,
+                        icon: const Icon(Icons.calendar_today, size: 16),
                         label: const Text(
-                          'Schedule',
+                          'Schedule Worker',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey.shade800,
-                          side: BorderSide(color: Colors.grey.shade400),
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFF2563EB)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
