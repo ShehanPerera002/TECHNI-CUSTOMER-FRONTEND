@@ -14,14 +14,15 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  int _refreshKey = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ActivitiesScreen(),
-    BookingsScreen(),
-    NotificationsScreen(),
-    CustomerProfileScreen(),
-  ];
+  List<Widget> get _screens => [
+        const HomeScreen(),
+        ActivitiesScreen(key: ValueKey('activities_$_refreshKey')),
+        BookingsScreen(key: ValueKey('bookings_$_refreshKey')),
+        NotificationsScreen(key: ValueKey('notifications_$_refreshKey')),
+        const CustomerProfileScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,13 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+            // Refresh Activities, Bookings, Notifications when tapped
+            if (index >= 1 && index <= 3) _refreshKey++;
+          });
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF2563EB),
         unselectedItemColor: Colors.black54,
