@@ -1,17 +1,18 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
 import '../models/professional.dart';
-import 'worker_on_the_way_screen.dart';
+import 'worker_approval_screen.dart';
 
 class ConnectingWorkerScreen extends StatefulWidget {
-  final Professional professional;
+  final List<Professional> professionals;
   final String serviceTitle;
 
   const ConnectingWorkerScreen({
     super.key,
-    required this.professional,
+    required this.professionals,
     required this.serviceTitle,
   });
 
@@ -22,25 +23,64 @@ class ConnectingWorkerScreen extends StatefulWidget {
 class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
   Timer? _progressTimer;
   double _progress = 0.0;
+  late Professional _assignedProfessional;
+  late List<Professional> _remainingProfessionals;
 
   @override
   void initState() {
     super.initState();
+    _remainingProfessionals = List.from(widget.professionals);
+    _startSearching();
+  }
+
+  void _startSearching() {
+    _progress = 0.0;
+    if (_remainingProfessionals.isEmpty) {
+      // No workers left
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No more workers available. Please try again later.'),
+          ),
+        );
+        Navigator.of(context).pop();
+      });
+      return;
+    }
+
+    final random = Random();
+    final index = random.nextInt(_remainingProfessionals.length);
+    _assignedProfessional = _remainingProfessionals[index];
+    _remainingProfessionals.removeAt(index);
+
+    _progressTimer?.cancel();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
       if (!mounted) return;
       setState(() => _progress = (_progress + 0.03).clamp(0.0, 1.0));
       if (_progress >= 1.0) {
         timer.cancel();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => WorkerOnTheWayScreen(
-              professional: widget.professional,
-              serviceTitle: widget.serviceTitle,
-            ),
-          ),
-        );
+        _showApprovalScreen();
       }
     });
+  }
+
+  Future<void> _showApprovalScreen() async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => WorkerApprovalScreen(
+          professional: _assignedProfessional,
+          serviceTitle: widget.serviceTitle,
+        ),
+      ),
+    );
+
+    // If declined (popped with false), search for next worker
+    if (result == false && mounted) {
+      setState(() => _startSearching());
+    }
+    // If confirmed/scheduled, the approval screen navigates via
+    // pushAndRemoveUntil, which disposes this screen automatically.
   }
 
   @override
@@ -51,8 +91,6 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final professional = widget.professional;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
       appBar: AppBar(
@@ -70,42 +108,33 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
             children: [
               const SizedBox(height: 70),
               Stack(
-                alignment: Alignment.bottomRight,
+                alignment: Alignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 78,
-                    backgroundColor: const Color(0xFF3B82F6),
-                    child: CircleAvatar(
-                      radius: 74,
-                      backgroundImage: NetworkImage(professional.avatarUrl),
+                  Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(24),
                     decoration: const BoxDecoration(
                       color: Color(0xFF3B82F6),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.build,
+                      Icons.search,
                       color: Colors.white,
-                      size: 20,
+                      size: 56,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Text(
-                professional.name,
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 54),
+              const SizedBox(height: 40),
               const Text(
-                'Connecting...',
+                'Searching...',
                 style: TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.w700,
@@ -114,7 +143,7 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
               ),
               const SizedBox(height: 18),
               const Text(
-                'Please wait while we reach the professional',
+                'Looking for the first available worker\nto accept your request',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, color: Color(0xFF8D8D8D)),
               ),
