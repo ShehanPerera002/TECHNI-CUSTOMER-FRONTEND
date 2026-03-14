@@ -34,33 +34,35 @@ class ServiceSearchSection extends StatelessWidget {
   Widget _buildSearchBar() {
     final hasQuery = controller.text.trim().isNotEmpty;
 
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        onChanged: (_) => onChanged(),
-        decoration: InputDecoration(
-          hintText: "Search for a service...",
-          hintStyle: TextStyle(color: Colors.grey.shade600),
-          prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-          suffixIcon: hasQuery
-              ? IconButton(
-                  icon: Icon(Icons.close, color: Colors.grey.shade600),
-                  onPressed: () {
-                    controller.clear();
-                    focusNode.unfocus();
-                    onChanged();
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      onChanged: (_) => onChanged(),
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: "Search for a service...",
+        hintStyle: TextStyle(color: Colors.grey.shade600),
+        prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+        suffixIcon: hasQuery
+            ? IconButton(
+                icon: Icon(Icons.close, color: Colors.grey.shade600),
+                onPressed: () {
+                  controller.clear();
+                  focusNode.unfocus();
+                  onChanged();
+                },
+              )
+            : null,
+        filled: true,
+        fillColor: Colors.grey.shade100,
+        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
         ),
       ),
     );

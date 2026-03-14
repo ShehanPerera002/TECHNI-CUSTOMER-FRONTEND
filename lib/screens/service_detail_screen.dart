@@ -243,10 +243,20 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
   }
 
   Widget _buildHeroImage() {
+    final path = service.imagePath;
+    if (path != null) {
+      return Center(
+        child: Image.asset(
+          path,
+          height: 220,
+          fit: BoxFit.contain,
+        ),
+      );
+    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Image.asset(
-        service.imagePath ?? AppAssets.welcomePage,
+        AppAssets.welcomePage,
         height: 200,
         width: double.infinity,
         fit: BoxFit.cover,

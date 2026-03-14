@@ -112,7 +112,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     try {
       await FirebaseAuth.instance.signOut();
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

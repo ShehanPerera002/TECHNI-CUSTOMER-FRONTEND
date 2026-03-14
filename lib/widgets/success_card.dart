@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../screens/create_profile_screen.dart';
 
 class SuccessCard extends StatelessWidget {
-  const SuccessCard({super.key});
+  final String phone;
+
+  const SuccessCard({super.key, this.phone = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +29,10 @@ class SuccessCard extends StatelessWidget {
             alignment: Alignment.topRight,
             child: GestureDetector(
               onTap: () {
-                Navigator.pushReplacement(
+                Navigator.pushReplacementNamed(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const CreateProfileScreen(),
-                  ),
+                  '/createProfile',
+                  arguments: {'phone': phone},
                 );
               },
               child: const Icon(Icons.close, size: 24, color: Colors.black87),

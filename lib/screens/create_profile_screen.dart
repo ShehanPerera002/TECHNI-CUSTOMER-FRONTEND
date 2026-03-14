@@ -28,6 +28,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   DateTime? selectedDate;
   File? _selectedImage;
   String? _phone;
+  String? _prefilledEmail;
 
   bool _isFormValid = false;
   bool _isSaving = false;
@@ -132,6 +133,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, dynamic>) {
       _phone = args['phone'] as String?;
+      final email = args['email'] as String?;
+      if (email != null && email.isNotEmpty && _emailController.text.isEmpty) {
+        _prefilledEmail = email;
+        _emailController.text = email;
+      }
     }
 
     _argsLoaded = true;
@@ -206,9 +212,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       return;
     }
 
-    if (_phone == null || _phone!.isEmpty) {
+    if ((_phone == null || _phone!.isEmpty) &&
+        (_prefilledEmail == null || _prefilledEmail!.isEmpty)) {
       setState(() {
-        _errorText = 'Phone number is missing. Please sign in again.';
+        _errorText = 'Phone number or email is missing. Please sign in again.';
       });
       return;
     }
@@ -306,7 +313,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'latitude': 0.0,
         'longitude': 0.0,
         'password': _passwordController.text,
-        'phone': _phone!,
+        'phone': (_phone != null && _phone!.isNotEmpty) ? _phone! : '',
         'role': 'customer',
         'uid': uid,
       };
