@@ -124,8 +124,11 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle,
-                            color: Color(0xFF22C55E), size: 22),
+                        const Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF22C55E),
+                          size: 22,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -170,10 +173,7 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
   Widget _buildWorkerHeader(Professional p) {
     return Row(
       children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundImage: NetworkImage(p.avatarUrl),
-        ),
+        CircleAvatar(radius: 40, backgroundImage: NetworkImage(p.avatarUrl)),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -219,7 +219,11 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Colors.grey.shade600,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Can arrive in ${p.timeToBook}',
@@ -264,12 +268,19 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, size: 16, color: Colors.green.shade600),
+                  Icon(
+                    Icons.check_circle,
+                    size: 16,
+                    color: Colors.green.shade600,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       s,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
                   ),
                 ],
@@ -434,7 +445,10 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
                     const SizedBox(width: 6),
                     Text(
                       r.timeAgo,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -537,7 +551,6 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
                 ),
               ],
             ),
-
           ],
         ),
       ),

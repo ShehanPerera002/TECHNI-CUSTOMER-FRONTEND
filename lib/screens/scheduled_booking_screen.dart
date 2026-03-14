@@ -19,8 +19,7 @@ class ScheduledBookingScreen extends StatefulWidget {
   });
 
   @override
-  State<ScheduledBookingScreen> createState() =>
-      _ScheduledBookingScreenState();
+  State<ScheduledBookingScreen> createState() => _ScheduledBookingScreenState();
 }
 
 class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
@@ -326,10 +325,7 @@ class _DetailRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           ),
         ),
         Text(

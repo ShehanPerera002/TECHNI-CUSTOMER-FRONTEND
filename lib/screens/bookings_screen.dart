@@ -30,10 +30,12 @@ class _BookingsScreenState extends State<BookingsScreen>
   Widget build(BuildContext context) {
     final allBookings = BookingService.instance.bookings;
     final upcoming = allBookings
-        .where((b) =>
-            b.status == BookingStatus.pending ||
-            b.status == BookingStatus.confirmed ||
-            b.status == BookingStatus.inProgress)
+        .where(
+          (b) =>
+              b.status == BookingStatus.pending ||
+              b.status == BookingStatus.confirmed ||
+              b.status == BookingStatus.inProgress,
+        )
         .toList();
     final completed = allBookings
         .where((b) => b.status == BookingStatus.completed)
@@ -76,11 +78,18 @@ class _BookingsScreenState extends State<BookingsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _BookingList(bookings: upcoming, emptyMessage: 'No upcoming bookings'),
           _BookingList(
-              bookings: completed, emptyMessage: 'No completed bookings'),
+            bookings: upcoming,
+            emptyMessage: 'No upcoming bookings',
+          ),
           _BookingList(
-              bookings: cancelled, emptyMessage: 'No cancelled bookings'),
+            bookings: completed,
+            emptyMessage: 'No completed bookings',
+          ),
+          _BookingList(
+            bookings: cancelled,
+            emptyMessage: 'No cancelled bookings',
+          ),
         ],
       ),
     );
@@ -193,8 +202,10 @@ class _BookingCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -282,8 +293,11 @@ class _BookingCard extends StatelessWidget {
                         if (booking.workerRating != null)
                           Row(
                             children: [
-                              const Icon(Icons.star,
-                                  size: 14, color: Color(0xFFFBBF24)),
+                              const Icon(
+                                Icons.star,
+                                size: 14,
+                                color: Color(0xFFFBBF24),
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 booking.workerRating!.toStringAsFixed(1),
@@ -299,10 +313,7 @@ class _BookingCard extends StatelessWidget {
                   ),
                   Text(
                     'Assigned Worker',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                 ],
               ),
@@ -314,8 +325,11 @@ class _BookingCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 20,
                     backgroundColor: Colors.grey.shade200,
-                    child: Icon(Icons.person_search,
-                        size: 20, color: Colors.grey.shade500),
+                    child: Icon(
+                      Icons.person_search,
+                      size: 20,
+                      color: Colors.grey.shade500,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -396,10 +410,7 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           '$label: ',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         Expanded(
           child: Text(

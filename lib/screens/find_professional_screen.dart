@@ -35,7 +35,8 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
     '20 min',
   ];
 
-  static const _paymentOptions = ['Cash', 'Card payment'];
+  bool _cashOnlySelected = false;
+
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
 
   @override
@@ -137,31 +138,44 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
               style: const TextStyle(fontSize: 15),
             ),
             const SizedBox(height: 8),
-            Row(children: [
-              const Icon(Icons.calendar_today,
-                  size: 16, color: Color(0xFF2563EB)),
-              const SizedBox(width: 8),
-              Text(formattedDate, style: const TextStyle(fontSize: 15)),
-            ]),
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 8),
+                Text(formattedDate, style: const TextStyle(fontSize: 15)),
+              ],
+            ),
             const SizedBox(height: 6),
-            Row(children: [
-              const Icon(Icons.access_time,
-                  size: 16, color: Color(0xFF2563EB)),
-              const SizedBox(width: 8),
-              Text(formattedTime, style: const TextStyle(fontSize: 15)),
-            ]),
+            Row(
+              children: [
+                const Icon(
+                  Icons.access_time,
+                  size: 16,
+                  color: Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 8),
+                Text(formattedTime, style: const TextStyle(fontSize: 15)),
+              ],
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: TextStyle(color: Colors.grey.shade600)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB)),
+              backgroundColor: const Color(0xFF2563EB),
+            ),
             child: const Text('Confirm'),
           ),
         ],
@@ -261,31 +275,28 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                   width: 44,
                   height: 44,
                   child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.network(
-                          p.avatarUrl,
-                          fit: BoxFit.cover,
-                          width: 40,
-                          height: 40,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(color: Colors.grey.shade300),
-                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        p.avatarUrl,
+                        fit: BoxFit.cover,
+                        width: 40,
+                        height: 40,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(color: Colors.grey.shade300),
                       ),
                     ),
+                  ),
                 ),
               )
               .toList(),
@@ -323,7 +334,11 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.blue.shade700,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -342,12 +357,53 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildDropdown(
-                      value: _paymentMethod,
-                      items: _paymentOptions,
-                      icon: Icons.payments,
-                      onChanged: (v) =>
-                          setState(() => _paymentMethod = v ?? 'Cash'),
+                    child: SizedBox(
+                      height: 48,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _cashOnlySelected = !_cashOnlySelected;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _cashOnlySelected
+                                ? const Color(0xFF2563EB)
+                                : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _cashOnlySelected
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.blue.shade200,
+                            ),
+                          ),
+                          child: Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.payments,
+                                  size: 18,
+                                  color: _cashOnlySelected
+                                      ? Colors.white
+                                      : const Color(0xFF2563EB),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Cash Only',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: _cashOnlySelected
+                                        ? Colors.white
+                                        : const Color(0xFF2563EB),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
