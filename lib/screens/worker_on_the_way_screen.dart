@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../core/booking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
+import 'in_app_call_screen.dart';
+import 'in_app_chat_screen.dart';
 
 class WorkerOnTheWayScreen extends StatelessWidget {
   final Professional professional;
@@ -92,27 +95,45 @@ class WorkerOnTheWayScreen extends StatelessWidget {
           ),
           Positioned(
             right: 18,
-            bottom: 330,
-            child: FloatingActionButton(
-              heroTag: 'emergencyFab',
-              backgroundColor: const Color(0xFFFF2A2A),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        EmergencyHelpScreen(serviceTitle: serviceTitle),
+            bottom: 355,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2A2A).withValues(alpha: 0.35),
+                    blurRadius: 14,
+                    spreadRadius: 2,
                   ),
-                );
-              },
-              child: const Icon(Icons.sos, color: Colors.white),
+                ],
+              ),
+              child: FloatingActionButton(
+                heroTag: 'emergencyFab',
+                backgroundColor: const Color(0xFFFF2A2A),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          EmergencyHelpScreen(serviceTitle: serviceTitle),
+                    ),
+                  );
+                },
+                child: const Icon(
+                  Icons.notifications_active,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
           Positioned(
             left: 12,
             right: 12,
             bottom: 12,
-            child: _TripSheet(professional: professional),
+            child: _TripSheet(
+              professional: professional,
+              serviceTitle: serviceTitle,
+            ),
           ),
         ],
       ),
@@ -122,19 +143,41 @@ class WorkerOnTheWayScreen extends StatelessWidget {
 
 class _TripSheet extends StatefulWidget {
   final Professional professional;
+  final String serviceTitle;
 
-  const _TripSheet({required this.professional});
+  const _TripSheet({required this.professional, required this.serviceTitle});
 
   @override
   State<_TripSheet> createState() => _TripSheetState();
 }
 
 class _TripSheetState extends State<_TripSheet> {
-  static const _paymentOptions = ['Cash', 'Card payment'];
+  static const _paymentOptions = ['Cash'];
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
-
   String _paymentMethod = _paymentOptions.first;
   String _language = _languageOptions.first;
+
+  void _confirmWork() {
+    BookingService.instance.completeBooking(
+      BookingService.instance.bookings
+          .firstWhere(
+            (b) =>
+                b.serviceTitle == widget.serviceTitle &&
+                b.workerName == widget.professional.name,
+            orElse: () => BookingService.instance.bookings.first,
+          )
+          .id,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${widget.professional.name} has completed the work!'),
+        backgroundColor: const Color(0xFF22C55E),
+      ),
+    );
+
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +196,7 @@ class _TripSheetState extends State<_TripSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Status header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -161,8 +205,8 @@ class _TripSheetState extends State<_TripSheet> {
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
-              children: const [
-                Text(
+              children: [
+                const Text(
                   'Worker is on the way',
                   style: TextStyle(
                     color: Colors.white,
@@ -170,10 +214,10 @@ class _TripSheetState extends State<_TripSheet> {
                     fontSize: 16,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  '5 min...',
-                  style: TextStyle(
+                  widget.professional.timeToBook,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -186,6 +230,7 @@ class _TripSheetState extends State<_TripSheet> {
             padding: const EdgeInsets.all(14),
             child: Column(
               children: [
+                // Worker info row
                 Row(
                   children: [
                     CircleAvatar(
@@ -221,7 +266,16 @@ class _TripSheetState extends State<_TripSheet> {
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppChatScreen(
+                              professional: widget.professional,
+                            ),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.chat_bubble_outline),
                     ),
                     const SizedBox(width: 6),
@@ -229,47 +283,54 @@ class _TripSheetState extends State<_TripSheet> {
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppCallScreen(
+                              professional: widget.professional,
+                            ),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.call),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
+                // Cash Only badge
                 Container(
-                  width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 10,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFE1E1E1)),
+                    color: const Color(0xFFF0FDF4),
+                    border: Border.all(
+                      color: const Color(0xFF22C55E).withOpacity(0.4),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Column(
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _PriceRow(label: 'Total price', value: 'Rs 1500'),
-                      SizedBox(height: 8),
-                      _PriceRow(label: 'Hourly Rate', value: 'Rs 200 / hr'),
-                      SizedBox(height: 8),
-                      _PriceRow(label: 'Materials', value: 'At Cost'),
+                      Icon(Icons.payments, size: 18, color: Color(0xFF22C55E)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Cash Only',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF22C55E),
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Language dropdown
                 Row(
                   children: [
-                    Expanded(
-                      child: _SelectionDropdown(
-                        icon: Icons.payments,
-                        value: _paymentMethod,
-                        items: _paymentOptions,
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _paymentMethod = value);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: _SelectionDropdown(
                         icon: Icons.language,
@@ -283,29 +344,36 @@ class _TripSheetState extends State<_TripSheet> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                // Confirm button
+                SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _confirmWork,
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text(
+                      'Confirm',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PriceRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _PriceRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(label, style: TextStyle(color: Colors.grey.shade700)),
-        const Spacer(),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-      ],
     );
   }
 }

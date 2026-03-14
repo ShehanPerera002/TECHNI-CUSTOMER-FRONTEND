@@ -8,6 +8,7 @@ class Professional {
   final String timeToBook;
   final LatLng location;
   final String avatarUrl;
+  final String phoneNumber;
 
   const Professional({
     required this.id,
@@ -16,6 +17,7 @@ class Professional {
     required this.timeToBook,
     required this.location,
     required this.avatarUrl,
+    required this.phoneNumber,
   });
 
   Professional copyWith({LatLng? location, String? timeToBook}) {
@@ -26,6 +28,7 @@ class Professional {
       timeToBook: timeToBook ?? this.timeToBook,
       location: location ?? this.location,
       avatarUrl: avatarUrl,
+      phoneNumber: phoneNumber,
     );
   }
 
@@ -42,6 +45,7 @@ class Professional {
         double lat,
         double lng,
         String avatar,
+        String phone,
       })
     >
     items,
@@ -59,6 +63,7 @@ class Professional {
           _center.longitude + item.lng,
         ),
         avatarUrl: item.avatar,
+        phoneNumber: item.phone,
       );
     }).toList();
   }
@@ -72,6 +77,7 @@ class Professional {
         lat: _d,
         lng: _d,
         avatar: 'https://randomuser.me/api/portraits/men/11.jpg',
+        phone: '+94 71 234 5678',
       ),
       (
         name: 'Sunil Santha',
@@ -80,6 +86,7 @@ class Professional {
         lat: -_d,
         lng: _d * 1.2,
         avatar: 'https://randomuser.me/api/portraits/men/22.jpg',
+        phone: '+94 77 345 6789',
       ),
       (
         name: 'Kamala Silva',
@@ -88,6 +95,7 @@ class Professional {
         lat: _d * 0.8,
         lng: -_d * 1.5,
         avatar: 'https://randomuser.me/api/portraits/women/11.jpg',
+        phone: '+94 76 456 7890',
       ),
       (
         name: 'Rohan Fernando',
@@ -96,6 +104,7 @@ class Professional {
         lat: -_d * 1.3,
         lng: -_d * 0.5,
         avatar: 'https://randomuser.me/api/portraits/men/33.jpg',
+        phone: '+94 72 567 8901',
       ),
       (
         name: 'Nimal Jayawardena',
@@ -104,6 +113,7 @@ class Professional {
         lat: _d * 1.2,
         lng: _d * 0.3,
         avatar: 'https://randomuser.me/api/portraits/men/44.jpg',
+        phone: '+94 75 678 9012',
       ),
     ]);
   }
@@ -117,6 +127,7 @@ class Professional {
         lat: _d * 0.9,
         lng: _d * 1.1,
         avatar: 'https://randomuser.me/api/portraits/men/15.jpg',
+        phone: '+94 71 111 2233',
       ),
       (
         name: 'Nirosha Gunawardena',
@@ -125,6 +136,7 @@ class Professional {
         lat: -_d * 1.1,
         lng: _d * 0.8,
         avatar: 'https://randomuser.me/api/portraits/women/25.jpg',
+        phone: '+94 77 222 3344',
       ),
       (
         name: 'Chandima Liyanage',
@@ -133,6 +145,7 @@ class Professional {
         lat: _d * 0.6,
         lng: -_d * 1.2,
         avatar: 'https://randomuser.me/api/portraits/men/52.jpg',
+        phone: '+94 76 333 4455',
       ),
       (
         name: 'Tharanga Dissanayake',
@@ -141,6 +154,7 @@ class Professional {
         lat: -_d * 0.9,
         lng: -_d * 0.7,
         avatar: 'https://randomuser.me/api/portraits/men/68.jpg',
+        phone: '+94 72 444 5566',
       ),
       (
         name: 'Manjula Weerasinghe',
@@ -149,6 +163,7 @@ class Professional {
         lat: _d * 1.4,
         lng: _d * 0.5,
         avatar: 'https://randomuser.me/api/portraits/women/42.jpg',
+        phone: '+94 75 555 6677',
       ),
     ]);
   }
@@ -162,6 +177,7 @@ class Professional {
         lat: _d * 1.0,
         lng: _d * 0.9,
         avatar: 'https://randomuser.me/api/portraits/men/18.jpg',
+        phone: '+94 71 666 7788',
       ),
       (
         name: 'Sunethra Pathirana',
@@ -170,6 +186,7 @@ class Professional {
         lat: -_d * 0.8,
         lng: _d * 1.3,
         avatar: 'https://randomuser.me/api/portraits/women/28.jpg',
+        phone: '+94 77 777 8899',
       ),
       (
         name: 'Ajith Kalubowila',
@@ -178,6 +195,7 @@ class Professional {
         lat: _d * 0.7,
         lng: -_d * 1.0,
         avatar: 'https://randomuser.me/api/portraits/men/35.jpg',
+        phone: '+94 76 888 9900',
       ),
       (
         name: 'Ruwani Siriwardena',
@@ -186,6 +204,7 @@ class Professional {
         lat: -_d * 1.2,
         lng: -_d * 0.4,
         avatar: 'https://randomuser.me/api/portraits/women/48.jpg',
+        phone: '+94 72 999 0011',
       ),
       (
         name: 'Thusitha Mendis',
@@ -194,6 +213,7 @@ class Professional {
         lat: _d * 1.1,
         lng: _d * 0.6,
         avatar: 'https://randomuser.me/api/portraits/men/72.jpg',
+        phone: '+94 75 100 1122',
       ),
     ]);
   }
@@ -207,6 +227,7 @@ class Professional {
         lat: _d * 0.85,
         lng: _d * 1.05,
         avatar: 'https://randomuser.me/api/portraits/men/21.jpg',
+        phone: '+94 71 200 2233',
       ),
       (
         name: 'Indika Ranasinghe',
@@ -215,6 +236,7 @@ class Professional {
         lat: -_d * 0.95,
         lng: _d * 0.9,
         avatar: 'https://randomuser.me/api/portraits/men/47.jpg',
+        phone: '+94 77 300 3344',
       ),
       (
         name: 'Nadeeka Jayasuriya',
@@ -223,6 +245,7 @@ class Professional {
         lat: _d * 0.65,
         lng: -_d * 1.15,
         avatar: 'https://randomuser.me/api/portraits/women/31.jpg',
+        phone: '+94 76 400 4455',
       ),
       (
         name: 'Kumara Senanayake',
@@ -231,6 +254,7 @@ class Professional {
         lat: -_d * 1.15,
         lng: -_d * 0.6,
         avatar: 'https://randomuser.me/api/portraits/men/58.jpg',
+        phone: '+94 72 500 5566',
       ),
       (
         name: 'Chamari Wijewardena',
@@ -239,6 +263,7 @@ class Professional {
         lat: _d * 1.25,
         lng: _d * 0.4,
         avatar: 'https://randomuser.me/api/portraits/women/55.jpg',
+        phone: '+94 75 600 6677',
       ),
     ]);
   }
@@ -252,6 +277,7 @@ class Professional {
         lat: _d * 0.92,
         lng: _d * 0.98,
         avatar: 'https://randomuser.me/api/portraits/men/24.jpg',
+        phone: '+94 71 700 7788',
       ),
       (
         name: 'Sajeewani Gunaratne',
@@ -260,6 +286,7 @@ class Professional {
         lat: -_d * 0.88,
         lng: _d * 1.1,
         avatar: 'https://randomuser.me/api/portraits/women/36.jpg',
+        phone: '+94 77 800 8899',
       ),
       (
         name: 'Nuwan Bandara',
@@ -268,6 +295,7 @@ class Professional {
         lat: _d * 0.72,
         lng: -_d * 1.08,
         avatar: 'https://randomuser.me/api/portraits/men/61.jpg',
+        phone: '+94 76 900 9900',
       ),
       (
         name: 'Dilhani Ekanayake',
@@ -276,6 +304,7 @@ class Professional {
         lat: -_d * 1.08,
         lng: -_d * 0.55,
         avatar: 'https://randomuser.me/api/portraits/women/62.jpg',
+        phone: '+94 72 101 0011',
       ),
       (
         name: 'Lasantha Perera',
@@ -284,6 +313,7 @@ class Professional {
         lat: _d * 1.18,
         lng: _d * 0.45,
         avatar: 'https://randomuser.me/api/portraits/men/75.jpg',
+        phone: '+94 75 202 0122',
       ),
     ]);
   }
@@ -297,6 +327,7 @@ class Professional {
         lat: _d * 0.94,
         lng: _d * 1.06,
         avatar: 'https://randomuser.me/api/portraits/men/12.jpg',
+        phone: '+94 71 303 0233',
       ),
       (
         name: 'Shalani Peris',
@@ -305,6 +336,7 @@ class Professional {
         lat: -_d * 0.92,
         lng: _d * 0.84,
         avatar: 'https://randomuser.me/api/portraits/women/54.jpg',
+        phone: '+94 77 404 0344',
       ),
       (
         name: 'Ravindu Hettiarachchi',
@@ -313,6 +345,7 @@ class Professional {
         lat: _d * 0.66,
         lng: -_d * 1.1,
         avatar: 'https://randomuser.me/api/portraits/men/65.jpg',
+        phone: '+94 76 505 0455',
       ),
       (
         name: 'Piumi Nisansala',
@@ -321,6 +354,7 @@ class Professional {
         lat: -_d * 1.0,
         lng: -_d * 0.58,
         avatar: 'https://randomuser.me/api/portraits/women/41.jpg',
+        phone: '+94 72 606 0566',
       ),
       (
         name: 'Sanjeewa Rodrigo',
@@ -329,6 +363,7 @@ class Professional {
         lat: _d * 1.15,
         lng: _d * 0.48,
         avatar: 'https://randomuser.me/api/portraits/men/70.jpg',
+        phone: '+94 75 707 0677',
       ),
     ]);
   }
@@ -342,6 +377,7 @@ class Professional {
         lat: _d * 0.88,
         lng: _d * 1.0,
         avatar: 'https://randomuser.me/api/portraits/men/16.jpg',
+        phone: '+94 71 808 0788',
       ),
       (
         name: 'Nadee Wickremasinghe',
@@ -350,6 +386,7 @@ class Professional {
         lat: -_d * 1.05,
         lng: _d * 0.9,
         avatar: 'https://randomuser.me/api/portraits/women/64.jpg',
+        phone: '+94 77 909 0899',
       ),
       (
         name: 'Malith Fernando',
@@ -358,6 +395,7 @@ class Professional {
         lat: _d * 0.7,
         lng: -_d * 1.03,
         avatar: 'https://randomuser.me/api/portraits/men/57.jpg',
+        phone: '+94 76 110 1900',
       ),
       (
         name: 'Chamodi Karunaratne',
@@ -366,6 +404,7 @@ class Professional {
         lat: -_d * 1.1,
         lng: -_d * 0.6,
         avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
+        phone: '+94 72 211 2011',
       ),
       (
         name: 'Ramesh Alwis',
@@ -374,6 +413,7 @@ class Professional {
         lat: _d * 1.2,
         lng: _d * 0.5,
         avatar: 'https://randomuser.me/api/portraits/men/73.jpg',
+        phone: '+94 75 312 2122',
       ),
     ]);
   }

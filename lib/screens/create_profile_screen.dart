@@ -20,15 +20,21 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
   DateTime? selectedDate;
   File? _selectedImage;
   String? _phone;
+  String? _prefilledEmail;
 
   bool _isFormValid = false;
   bool _isSaving = false;
   bool _isPickingImage = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String? _errorText;
   bool _argsLoaded = false;
 
@@ -39,15 +45,78 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     _nameController.addListener(_validateForm);
     _birthDateController.addListener(_validateForm);
     _emailController.addListener(_validateForm);
+    _passwordController.addListener(_validateForm);
+    _confirmPasswordController.addListener(_validateForm);
     _addressController.addListener(_validateForm);
   }
 
+  bool _isPasswordValid(String password) {
+    final String value = password.trim();
+    final bool hasLetter = RegExp(r'[A-Za-z]').hasMatch(value);
+    final bool hasNumber = RegExp(r'\d').hasMatch(value);
+    final bool hasSpecial = RegExp(r'[^A-Za-z0-9]').hasMatch(value);
+    return value.isNotEmpty &&
+        value.length <= 8 &&
+        hasLetter &&
+        hasNumber &&
+        hasSpecial;
+  }
+
+  Widget _buildPasswordRequirements() {
+    final String pw = _passwordController.text.trim();
+    final bool hasMaxLen = pw.isNotEmpty && pw.length <= 8;
+    final bool hasLetter = RegExp(r'[A-Za-z]').hasMatch(pw);
+    final bool hasNumber = RegExp(r'\d').hasMatch(pw);
+    final bool hasSpecial = RegExp(r'[^A-Za-z0-9]').hasMatch(pw);
+
+    Widget req(String label, bool met) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: met ? Colors.green : const Color(0xFFD1D5DB),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: met ? Colors.green : const Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        req("Maximum 8 characters", hasMaxLen),
+        req("Include a letter", hasLetter),
+        req("Include a number", hasNumber),
+        req("Include a special character", hasSpecial),
+      ],
+    );
+  }
+
   void _validateForm() {
+    final String password = _passwordController.text;
+    final String confirmPassword = _confirmPasswordController.text;
+
     bool isValid =
         _nameController.text.trim().isNotEmpty &&
         _birthDateController.text.trim().isNotEmpty &&
         _emailController.text.trim().isNotEmpty &&
         _emailController.text.contains("@") &&
+        _isPasswordValid(password) &&
+        confirmPassword == password &&
         _addressController.text.trim().isNotEmpty &&
         _selectedImage != null;
 
@@ -64,6 +133,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, dynamic>) {
       _phone = args['phone'] as String?;
+      final email = args['email'] as String?;
+      if (email != null && email.isNotEmpty && _emailController.text.isEmpty) {
+        _prefilledEmail = email;
+        _emailController.text = email;
+      }
     }
 
     _argsLoaded = true;
@@ -123,9 +197,25 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   Future<void> _saveProfile() async {
     if (!_isFormValid || _isSaving) return;
 
-    if (_phone == null || _phone!.isEmpty) {
+    if (!_isPasswordValid(_passwordController.text)) {
       setState(() {
-        _errorText = 'Phone number is missing. Please sign in again.';
+        _errorText =
+            'Password must be max 8 characters and include letters, numbers, and special characters.';
+      });
+      return;
+    }
+
+    if (_confirmPasswordController.text != _passwordController.text) {
+      setState(() {
+        _errorText = 'Password and confirm password do not match.';
+      });
+      return;
+    }
+
+    if ((_phone == null || _phone!.isEmpty) &&
+        (_prefilledEmail == null || _prefilledEmail!.isEmpty)) {
+      setState(() {
+        _errorText = 'Phone number or email is missing. Please sign in again.';
       });
       return;
     }
@@ -136,9 +226,75 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     });
 
     try {
-      final authUser = FirebaseAuth.instance.currentUser;
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final uid = authUser?.uid ?? 'uid_$now';
+      User? authUser = FirebaseAuth.instance.currentUser;
+      if (authUser == null) {
+        final anonymousCred = await FirebaseAuth.instance.signInAnonymously();
+        authUser = anonymousCred.user;
+      }
+
+      if (authUser == null) {
+        throw FirebaseAuthException(
+          code: 'auth-user-unavailable',
+          message: 'Failed to initialize user identity.',
+        );
+      }
+
+      final String email = _emailController.text.trim();
+      final String password = _passwordController.text;
+      final AuthCredential emailCredential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+
+      try {
+        await authUser.linkWithCredential(emailCredential);
+        authUser = FirebaseAuth.instance.currentUser ?? authUser;
+      } on FirebaseAuthException catch (error) {
+        if (error.code == 'provider-already-linked' ||
+            error.code == 'credential-already-in-use' ||
+            error.code == 'email-already-in-use') {
+          // Keep current auth user and continue saving profile.
+        } else if (error.code == 'operation-not-allowed') {
+          if (!mounted) return;
+          setState(() {
+            _errorText =
+                'Email/password sign-in is disabled in Firebase Authentication.';
+          });
+          return;
+        } else if (error.code == 'invalid-email') {
+          if (!mounted) return;
+          setState(() {
+            _errorText = 'Please enter a valid email address.';
+          });
+          return;
+        } else if (error.code == 'weak-password') {
+          if (!mounted) return;
+          setState(() {
+            _errorText = 'Please use a stronger password.';
+          });
+          return;
+        } else {
+          rethrow;
+        }
+      }
+
+      if (authUser == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorText = 'Failed to initialize user identity.';
+        });
+        return;
+      }
+
+      if (_selectedImage == null) {
+        if (!mounted) return;
+        setState(() {
+          _errorText = 'Please upload a profile image.';
+        });
+        return;
+      }
+
+      final uid = authUser.uid;
       final imageUrl = await CloudinaryService.uploadCustomerImage(
         _selectedImage!,
       );
@@ -150,12 +306,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
             ? '${selectedDate!.year.toString().padLeft(4, '0')}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}'
             : _birthDateController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
-        'email': _emailController.text.trim(),
+        'email': email,
+        'emailLower': email.toLowerCase(),
         'fullName': _nameController.text.trim(),
         'isVerified': true,
         'latitude': 0.0,
         'longitude': 0.0,
-        'phone': _phone!,
+        'password': _passwordController.text,
+        'phone': (_phone != null && _phone!.isNotEmpty) ? _phone! : '',
         'role': 'customer',
         'uid': uid,
       };
@@ -174,7 +332,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     } on FirebaseException catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorText = error.message ?? 'Failed to save profile. Please try again.';
+        _errorText =
+            error.message ?? 'Failed to save profile. Please try again.';
       });
     } catch (_) {
       if (!mounted) return;
@@ -195,6 +354,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     _nameController.dispose();
     _birthDateController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _addressController.dispose();
     super.dispose();
   }
@@ -347,6 +508,66 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
                       const SizedBox(height: 20),
 
+                      const Text(
+                        "Password",
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        controller: _passwordController,
+                        hint: "Enter your password",
+                        icon: Icons.lock_outline,
+                        obscureText: _obscurePassword,
+                        inputFormatters: [LengthLimitingTextInputFormatter(8)],
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+                      _buildPasswordRequirements(),
+
+                      const SizedBox(height: 20),
+
+                      const Text(
+                        "Confirm Password",
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        controller: _confirmPasswordController,
+                        hint: "Re-enter your password",
+                        icon: Icons.lock_outline,
+                        obscureText: _obscureConfirmPassword,
+                        inputFormatters: [LengthLimitingTextInputFormatter(8)],
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
+                            });
+                          },
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
                       // Location
                       const Text(
                         "Your Location",
@@ -456,6 +677,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     required TextEditingController controller,
     required String hint,
     IconData? icon,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       height: 55,
@@ -465,10 +689,13 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       ),
       child: TextField(
         controller: controller,
+        obscureText: obscureText,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
           prefixIcon: icon != null ? Icon(icon, color: Colors.black54) : null,
+          suffixIcon: suffixIcon,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
         ),

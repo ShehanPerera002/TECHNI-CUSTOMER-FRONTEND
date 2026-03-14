@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../models/professional.dart';
 import '../models/professional_profile_data.dart';
 import '../models/review.dart';
-import 'connecting_worker_screen.dart';
 
 /// Full profile screen for a selected professional.
 class ProfessionalProfileScreen extends StatefulWidget {
@@ -146,67 +145,6 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             Text(
               '${p.rating} (247 reviews)',
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 36,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ConnectingWorkerScreen(
-                          professional: p,
-                          serviceTitle: widget.serviceTitle,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.phone, size: 14),
-                  label: const Text(
-                    'Connect Now',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 0,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 36,
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.calendar_today, size: 14),
-                  label: const Text('Schedule', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black87,
-                    side: const BorderSide(color: Colors.black87),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 0,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         ),
