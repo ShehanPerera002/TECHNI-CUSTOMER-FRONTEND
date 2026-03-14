@@ -21,7 +21,7 @@ class SuccessScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const TechniLogo(),
               const Spacer(),
-              const Center(child: SuccessCard()),
+              Center(child: SuccessCard(phone: phone)),
               const Spacer(),
               PrimaryButton(
                 text: 'Continue',
