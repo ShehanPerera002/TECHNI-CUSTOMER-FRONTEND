@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../core/booking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
+import 'in_app_call_screen.dart';
+import 'in_app_chat_screen.dart';
 
 class WorkerOnTheWayScreen extends StatelessWidget {
   final Professional professional;
@@ -127,7 +130,10 @@ class WorkerOnTheWayScreen extends StatelessWidget {
             left: 12,
             right: 12,
             bottom: 12,
-            child: _TripSheet(professional: professional),
+            child: _TripSheet(
+              professional: professional,
+              serviceTitle: serviceTitle,
+            ),
           ),
         ],
       ),
@@ -137,8 +143,12 @@ class WorkerOnTheWayScreen extends StatelessWidget {
 
 class _TripSheet extends StatefulWidget {
   final Professional professional;
+  final String serviceTitle;
 
-  const _TripSheet({required this.professional});
+  const _TripSheet({
+    required this.professional,
+    required this.serviceTitle,
+  });
 
   @override
   State<_TripSheet> createState() => _TripSheetState();
@@ -150,6 +160,59 @@ class _TripSheetState extends State<_TripSheet> {
 
   String _paymentMethod = _paymentOptions.first;
   String _language = _languageOptions.first;
+
+  Future<void> _confirmWork() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Confirm Work',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Confirm that ${widget.professional.name} has completed the work to your satisfaction?',
+          style: const TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Not Yet',
+                style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF22C55E)),
+            child: const Text('Yes, Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      // Mark the booking as completed
+      final bookings = BookingService.instance.bookings;
+      for (final b in bookings) {
+        if (b.serviceTitle == widget.serviceTitle &&
+            b.workerName == widget.professional.name) {
+          BookingService.instance.completeBooking(b.id);
+          break;
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Work with ${widget.professional.name} confirmed! Thank you.',
+          ),
+          backgroundColor: const Color(0xFF22C55E),
+        ),
+      );
+      // Navigate back to home
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,8 +239,8 @@ class _TripSheetState extends State<_TripSheet> {
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
-              children: const [
-                Text(
+              children: [
+                const Text(
                   'Worker is on the way',
                   style: TextStyle(
                     color: Colors.white,
@@ -185,10 +248,10 @@ class _TripSheetState extends State<_TripSheet> {
                     fontSize: 16,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  '5 min...',
-                  style: TextStyle(
+                  '${widget.professional.timeToBook}...',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -236,7 +299,16 @@ class _TripSheetState extends State<_TripSheet> {
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppChatScreen(
+                              professional: widget.professional,
+                            ),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.chat_bubble_outline),
                     ),
                     const SizedBox(width: 6),
@@ -244,7 +316,16 @@ class _TripSheetState extends State<_TripSheet> {
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppCallScreen(
+                              professional: widget.professional,
+                            ),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.call),
                     ),
                   ],
@@ -297,6 +378,30 @@ class _TripSheetState extends State<_TripSheet> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _confirmWork,
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text(
+                      'Confirm',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF22C55E),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
