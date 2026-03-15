@@ -40,8 +40,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         .doc(user.uid)
         .get();
 
+    print('[DEBUG] Checking profile for UID: \\${user.uid}');
+    print('[DEBUG] Document exists: \\${doc.exists}');
+    print('[DEBUG] Document data: \\${doc.data()}');
+
     final data = doc.data();
-    print('[DEBUG] Loaded profile data for UID ${user.uid}: $data');
     return data;
   }
 
