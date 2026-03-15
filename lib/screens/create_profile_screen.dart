@@ -226,55 +226,47 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     });
 
     try {
-      User? authUser = FirebaseAuth.instance.currentUser;
-      if (authUser == null) {
-        final anonymousCred = await FirebaseAuth.instance.signInAnonymously();
-        authUser = anonymousCred.user;
-      }
-
-      if (authUser == null) {
-        throw FirebaseAuthException(
-          code: 'auth-user-unavailable',
-          message: 'Failed to initialize user identity.',
-        );
-      }
-
       final String email = _emailController.text.trim();
       final String password = _passwordController.text;
-      final AuthCredential emailCredential = EmailAuthProvider.credential(
-        email: email,
-        password: password,
-      );
+      User? authUser = FirebaseAuth.instance.currentUser;
 
-      try {
-        await authUser.linkWithCredential(emailCredential);
-        authUser = FirebaseAuth.instance.currentUser ?? authUser;
-      } on FirebaseAuthException catch (error) {
-        if (error.code == 'provider-already-linked' ||
-            error.code == 'credential-already-in-use' ||
-            error.code == 'email-already-in-use') {
-          // Keep current auth user and continue saving profile.
-        } else if (error.code == 'operation-not-allowed') {
-          if (!mounted) return;
-          setState(() {
-            _errorText =
-                'Email/password sign-in is disabled in Firebase Authentication.';
-          });
-          return;
-        } else if (error.code == 'invalid-email') {
-          if (!mounted) return;
-          setState(() {
-            _errorText = 'Please enter a valid email address.';
-          });
-          return;
-        } else if (error.code == 'weak-password') {
-          if (!mounted) return;
-          setState(() {
-            _errorText = 'Please use a stronger password.';
-          });
-          return;
-        } else {
-          rethrow;
+      // If not signed in or signed in anonymously, create a new user with email/password
+      if (authUser == null || (authUser.isAnonymous)) {
+        try {
+          final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          authUser = userCredential.user;
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'email-already-in-use') {
+            // If email already in use, try to sign in
+            final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+            authUser = userCredential.user;
+          } else if (e.code == 'weak-password') {
+            if (!mounted) return;
+            setState(() {
+              _errorText = 'Please use a stronger password.';
+            });
+            return;
+          } else if (e.code == 'invalid-email') {
+            if (!mounted) return;
+            setState(() {
+              _errorText = 'Please enter a valid email address.';
+            });
+            return;
+          } else if (e.code == 'operation-not-allowed') {
+            if (!mounted) return;
+            setState(() {
+              _errorText = 'Email/password sign-in is disabled in Firebase Authentication.';
+            });
+            return;
+          } else {
+            rethrow;
+          }
         }
       }
 

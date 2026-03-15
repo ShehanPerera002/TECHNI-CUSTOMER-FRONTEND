@@ -22,7 +22,7 @@ class FindProfessionalScreen extends StatefulWidget {
 class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   static const _userLocation = LatLng(6.9271, 79.8612);
   late List<Professional> _professionals;
-  String _paymentMethod = 'Cash';
+    // final String _paymentMethod = 'Cash'; // Removed unused field
   String _language = 'Sinhala';
   Timer? _movementTimer;
   final Random _random = Random();
