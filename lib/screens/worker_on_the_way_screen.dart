@@ -262,38 +262,22 @@ class _TripSheetState extends State<_TripSheet> {
                         ],
                       ),
                     ),
-                    IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F1F1),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        shape: BoxShape.circle,
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => InAppChatScreen(
-                              professional: widget.professional,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline),
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(Icons.chat_bubble_outline, color: Colors.grey),
                     ),
                     const SizedBox(width: 6),
-                    IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F1F1),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        shape: BoxShape.circle,
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => InAppCallScreen(
-                              professional: widget.professional,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.call),
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(Icons.call, color: Colors.grey),
                     ),
                   ],
                 ),
