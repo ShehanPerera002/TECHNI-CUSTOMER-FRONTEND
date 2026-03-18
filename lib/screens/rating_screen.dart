@@ -183,6 +183,23 @@ import 'package:image_picker/image_picker.dart';
               ),
             ),
 
+             const SizedBox(height: 20),
+
+            //IMAGE UPLOAD BUTTON
+
+            Row(
+              children: [
+                ElevatedButton.icon(
+
+                  onPressed: pickImage,
+
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text("Add Photo"),
+                ),
+              ],
+            ),
+
+
         )
     }
     
