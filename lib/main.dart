@@ -9,6 +9,7 @@ import 'screens/success_screen.dart';
 import 'screens/create_profile_screen.dart';
 import 'screens/email_login_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/rating_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,7 @@ class TechniApp extends StatelessWidget {
         '/success': (context) => const SuccessScreen(),
         '/createProfile': (context) => const CreateProfileScreen(),
         '/home': (context) => const MainScreen(),
+        '/rating': (context) => const RatingScreen(),
       },
     );
   }
