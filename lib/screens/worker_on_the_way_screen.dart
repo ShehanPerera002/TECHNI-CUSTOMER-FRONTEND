@@ -1,14 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../core/booking_service.dart';
+import '../core/tracking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
 import 'in_app_call_screen.dart';
 import 'in_app_chat_screen.dart';
 
-class WorkerOnTheWayScreen extends StatelessWidget {
+class WorkerOnTheWayScreen extends StatefulWidget {
   final Professional professional;
   final String serviceTitle;
 
@@ -18,11 +20,107 @@ class WorkerOnTheWayScreen extends StatelessWidget {
     required this.serviceTitle,
   });
 
-  static const _customerLocation = LatLng(6.9271, 79.8612);
+  @override
+  State<WorkerOnTheWayScreen> createState() => _WorkerOnTheWayScreenState();
+}
+
+class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
+  GoogleMapController? _mapController;
+
+  LatLng? _customerLatLng;
+  LatLng _workerLatLng = const LatLng(6.9271, 79.8612);
+  List<LatLng> _routePoints = [];
+  String _eta = '--';
+  String _distance = '--';
+
+  StreamSubscription<LatLng>? _workerLocationSub;
+  StreamSubscription<Position>? _customerLocationSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCustomerLocation();
+    _listenToWorkerLocation();
+  }
+
+  /// Get customer's real GPS location
+  Future<void> _initCustomerLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    final pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    setState(() {
+      _customerLatLng = LatLng(pos.latitude, pos.longitude);
+    });
+
+    // Once we have customer location, fetch route
+    _updateRouteAndETA();
+
+    // Keep updating customer location too
+    _customerLocationSub =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 15,
+          ),
+        ).listen((pos) {
+          setState(() {
+            _customerLatLng = LatLng(pos.latitude, pos.longitude);
+          });
+          _updateRouteAndETA();
+        });
+  }
+
+  /// Listen to worker's live location from Firestore
+  void _listenToWorkerLocation() {
+    _workerLocationSub =
+        TrackingService.workerLocationStream(widget.professional.id).listen((
+          latLng,
+        ) {
+          setState(() => _workerLatLng = latLng);
+
+          // Smoothly move camera to keep worker in view
+          _mapController?.animateCamera(CameraUpdate.newLatLng(_workerLatLng));
+
+          _updateRouteAndETA();
+        });
+  }
+
+  /// Fetch route polyline + ETA whenever locations update
+  Future<void> _updateRouteAndETA() async {
+    if (_customerLatLng == null) return;
+
+    final results = await Future.wait([
+      TrackingService.getRoutePoints(_workerLatLng, _customerLatLng!),
+      TrackingService.getETA(_workerLatLng, _customerLatLng!),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      _routePoints = results[0] as List<LatLng>;
+      final etaData = results[1] as Map<String, String>;
+      _eta = etaData['eta'] ?? '--';
+      _distance = etaData['distance'] ?? '--';
+    });
+  }
+
+  @override
+  void dispose() {
+    _workerLocationSub?.cancel();
+    _customerLocationSub?.cancel();
+    _mapController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final routePoints = [_customerLocation, professional.location];
+    final customerPos = _customerLatLng ?? const LatLng(6.9271, 79.8612);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -34,7 +132,7 @@ class WorkerOnTheWayScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          serviceTitle,
+          widget.serviceTitle,
           style: const TextStyle(
             color: Colors.black,
             fontSize: 18,
@@ -45,94 +143,116 @@ class WorkerOnTheWayScreen extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          FlutterMap(
-            options: const MapOptions(
-              initialCenter: _customerLocation,
-              initialZoom: 14.8,
-              minZoom: 13,
-              maxZoom: 18,
+          // Google Map
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: customerPos,
+              zoom: 14.8,
             ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+            onMapCreated: (controller) => _mapController = controller,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            markers: {
+              // Worker marker
+              Marker(
+                markerId: const MarkerId('worker'),
+                position: _workerLatLng,
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueBlue,
+                ),
+                infoWindow: InfoWindow(title: widget.professional.name),
               ),
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: routePoints,
-                    strokeWidth: 5,
-                    color: const Color(0xFF1E293B),
-                  ),
-                ],
+              // Customer marker
+              Marker(
+                markerId: const MarkerId('customer'),
+                position: customerPos,
+                infoWindow: const InfoWindow(title: 'Your Location'),
               ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: professional.location,
-                    width: 54,
-                    height: 54,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 24,
-                        backgroundImage: NetworkImage(professional.avatarUrl),
+            },
+            // Route polyline
+            polylines: _routePoints.isNotEmpty
+                ? {
+                    Polyline(
+                      polylineId: const PolylineId('route'),
+                      points: _routePoints,
+                      color: const Color(0xFF2563EB),
+                      width: 5,
+                    ),
+                  }
+                : {},
+          ),
+
+          // ETA chip at top
+          Positioned(
+            top: 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x22000000), blurRadius: 8),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Color(0xFF2563EB),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'ETA: $_eta  •  $_distance',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
                     ),
-                  ),
-                  const Marker(
-                    point: _customerLocation,
-                    width: 46,
-                    height: 46,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.my_location, color: Color(0xFF3B82F6)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Positioned(
-            right: 18,
-            bottom: 355,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF2A2A).withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: FloatingActionButton(
-                heroTag: 'emergencyFab',
-                backgroundColor: const Color(0xFFFF2A2A),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          EmergencyHelpScreen(serviceTitle: serviceTitle),
-                    ),
-                  );
-                },
-                child: const Icon(
-                  Icons.notifications_active,
-                  color: Colors.white,
+                  ],
                 ),
               ),
             ),
           ),
+
+          // Emergency button
+          Positioned(
+            right: 18,
+            bottom: 355,
+            child: FloatingActionButton(
+              heroTag: 'emergencyFab',
+              backgroundColor: const Color(0xFFFF2A2A),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      EmergencyHelpScreen(serviceTitle: widget.serviceTitle),
+                ),
+              ),
+              child: const Icon(
+                Icons.notifications_active,
+                color: Colors.white,
+              ),
+            ),
+          ),
+
+          // Bottom trip sheet
           Positioned(
             left: 12,
             right: 12,
             bottom: 12,
             child: _TripSheet(
-              professional: professional,
-              serviceTitle: serviceTitle,
+              professional: widget.professional,
+              serviceTitle: widget.serviceTitle,
+              eta: _eta,
             ),
           ),
         ],
@@ -144,17 +264,20 @@ class WorkerOnTheWayScreen extends StatelessWidget {
 class _TripSheet extends StatefulWidget {
   final Professional professional;
   final String serviceTitle;
+  final String eta;
 
-  const _TripSheet({required this.professional, required this.serviceTitle});
+  const _TripSheet({
+    required this.professional,
+    required this.serviceTitle,
+    required this.eta,
+  });
 
   @override
   State<_TripSheet> createState() => _TripSheetState();
 }
 
 class _TripSheetState extends State<_TripSheet> {
-  // static const _paymentOptions = ['Cash']; // Removed unused field
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
-    // final String _paymentMethod = _paymentOptions.first; // Removed unused field
   String _language = _languageOptions.first;
 
   void _confirmWork() {
@@ -216,7 +339,7 @@ class _TripSheetState extends State<_TripSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.professional.timeToBook,
+                  widget.eta,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -262,27 +385,39 @@ class _TripSheetState extends State<_TripSheet> {
                         ],
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F1F1),
-                        shape: BoxShape.circle,
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      padding: const EdgeInsets.all(8),
-                      child: const Icon(Icons.chat_bubble_outline, color: Colors.grey),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => InAppChatScreen(
+                            professional: widget.professional,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.chat_bubble_outline),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F1F1),
-                        shape: BoxShape.circle,
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      padding: const EdgeInsets.all(8),
-                      child: const Icon(Icons.call, color: Colors.grey),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => InAppCallScreen(
+                            professional: widget.professional,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.call),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Cash Only badge
+                // Cash only badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -313,20 +448,14 @@ class _TripSheetState extends State<_TripSheet> {
                 ),
                 const SizedBox(height: 12),
                 // Language dropdown
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SelectionDropdown(
-                        icon: Icons.language,
-                        value: _language,
-                        items: _languageOptions,
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _language = value);
-                        },
-                      ),
-                    ),
-                  ],
+                _SelectionDropdown(
+                  icon: Icons.language,
+                  value: _language,
+                  items: _languageOptions,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _language = value);
+                  },
                 ),
                 const SizedBox(height: 12),
                 // Confirm button
@@ -391,7 +520,6 @@ class _SelectionDropdown extends StatelessWidget {
           onChanged: onChanged,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
           items: items
               .map(
                 (item) => DropdownMenuItem<String>(
@@ -400,12 +528,9 @@ class _SelectionDropdown extends StatelessWidget {
                     children: [
                       Icon(icon, size: 18),
                       const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          item,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
+                      Text(
+                        item,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),

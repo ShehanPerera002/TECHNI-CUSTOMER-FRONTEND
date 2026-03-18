@@ -118,7 +118,7 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         if (query.docs.isNotEmpty) {
           final data = query.docs.first.data() as Map<String, dynamic>;
           print('[DEBUG] Firestore login data: $data');
-          final firestorePassword = data['password']?.toString()?.trim();
+          final firestorePassword = data['password']?.toString().trim();
           print('[DEBUG] Firestore password: ${firestorePassword ?? 'null'}');
           print('[DEBUG] Entered password: $trimmedPassword');
           if (firestorePassword == null) {
@@ -128,7 +128,11 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
             return;
           }
           if (firestorePassword == trimmedPassword) {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
             return;
           } else {
             setState(() {
