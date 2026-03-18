@@ -24,4 +24,18 @@ import 'package:image_picker/image_picker.dart';
     final ImagePicker picker = ImagePicker();
 
     List<File> images = [];
+
+    //Function to pick image from gallery 
+    Future pickImage() async{
+
+        final XFile? image = 
+            await picker.pickImage (Source: ImageSource.gallery);
+
+        if (image != null){
+            setState((){
+                images.add(File(image.path));
+            });
+        }
+    }
+    
  }
