@@ -86,6 +86,74 @@ import 'package:image_picker/image_picker.dart';
               ),
             ), 
 
+            const SizedBox(height: 30),
+
+            //Rating card
+
+            Container(
+              padding: const EdgeInsets.all(20),
+
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(15),
+              ),
+
+              child: Column(
+                children: [
+
+                  /// Rating title
+                  const Text(
+                    "How was your service?",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                 
+                  RatingBar.builder(
+                    
+                    initialRating: rating,
+                    minRating: 1,
+                    itemCount: 5,
+                    itemSize: 35,
+
+                    // Star icon
+                    itemBuilder: (context, _) => const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                    ),
+
+                    // When user changes rating
+                    onRatingUpdate: (value) {
+
+                      setState(() {
+                        rating = value;
+                      });
+
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  
+                  Text(
+                    rating >= 4
+                        ? "Great"
+                        : rating >= 3
+                            ? "Good"
+                            : "Poor",
+                    style: const TextStyle(
+                      fontSize: 16,
+                    ),
+                  )
+
+                ],
+              ),
+            ),
+
         )
     }
     
