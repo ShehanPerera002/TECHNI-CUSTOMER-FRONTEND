@@ -5,8 +5,6 @@ import 'package:latlong2/latlong.dart';
 import '../core/booking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
-import 'in_app_call_screen.dart';
-import 'in_app_chat_screen.dart';
 
 class WorkerOnTheWayScreen extends StatelessWidget {
   final Professional professional;
@@ -154,7 +152,7 @@ class _TripSheet extends StatefulWidget {
 class _TripSheetState extends State<_TripSheet> {
   // static const _paymentOptions = ['Cash']; // Removed unused field
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
-    // final String _paymentMethod = _paymentOptions.first; // Removed unused field
+  // final String _paymentMethod = _paymentOptions.first; // Removed unused field
   String _language = _languageOptions.first;
 
   void _confirmWork() {
@@ -268,7 +266,10 @@ class _TripSheetState extends State<_TripSheet> {
                         shape: BoxShape.circle,
                       ),
                       padding: const EdgeInsets.all(8),
-                      child: const Icon(Icons.chat_bubble_outline, color: Colors.grey),
+                      child: const Icon(
+                        Icons.chat_bubble_outline,
+                        color: Colors.grey,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Container(

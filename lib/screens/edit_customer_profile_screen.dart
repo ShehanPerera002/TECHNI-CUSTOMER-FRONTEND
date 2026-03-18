@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/cloudinary_service.dart';
+import '../core/session_manager.dart';
 
 class EditCustomerProfileScreen extends StatefulWidget {
   const EditCustomerProfileScreen({
@@ -136,7 +137,8 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
     }
 
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final docId = user?.uid ?? SessionManager.customerDocId;
+    if (docId == null || docId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Session expired. Please sign in again.')),
       );
@@ -163,7 +165,7 @@ class _EditCustomerProfileScreenState extends State<EditCustomerProfileScreen> {
 
       await FirebaseFirestore.instance
           .collection('customers')
-          .doc(user.uid)
+          .doc(docId)
           .set(updated, SetOptions(merge: true));
 
       if (!mounted) return;

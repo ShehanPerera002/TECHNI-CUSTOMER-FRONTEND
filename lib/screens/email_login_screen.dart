@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../core/session_manager.dart';
 
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
@@ -87,9 +88,45 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         if (!mounted) return;
 
         if (doc.exists) {
+          SessionManager.setCustomerDocId(user.uid);
           Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
           return;
         } else {
+          // Profile might exist under a different UID (e.g., from phone auth sign-up)
+          final emailQuery = await FirebaseFirestore.instance
+              .collection('customers')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+          // Also try case-insensitive lookup
+          final QuerySnapshot effectiveQuery;
+          if (emailQuery.docs.isNotEmpty) {
+            effectiveQuery = emailQuery;
+          } else {
+            effectiveQuery = await FirebaseFirestore.instance
+                .collection('customers')
+                .where('emailLower', isEqualTo: email.toLowerCase())
+                .limit(1)
+                .get();
+          }
+
+          if (!mounted) return;
+
+          if (effectiveQuery.docs.isNotEmpty) {
+            // Migrate profile to current auth UID
+            final existingData = Map<String, dynamic>.from(effectiveQuery.docs.first.data() as Map);
+            existingData['uid'] = user.uid;
+            await FirebaseFirestore.instance
+                .collection('customers')
+                .doc(user.uid)
+                .set(existingData, SetOptions(merge: true));
+
+            SessionManager.setCustomerDocId(user.uid);
+            if (!mounted) return;
+            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            return;
+          }
+
           Navigator.pushNamedAndRemoveUntil(
             context,
             '/createProfile',
@@ -118,7 +155,7 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         if (query.docs.isNotEmpty) {
           final data = query.docs.first.data() as Map<String, dynamic>;
           print('[DEBUG] Firestore login data: $data');
-          final firestorePassword = data['password']?.toString()?.trim();
+          final firestorePassword = data['password']?.toString().trim();
           print('[DEBUG] Firestore password: ${firestorePassword ?? 'null'}');
           print('[DEBUG] Entered password: $trimmedPassword');
           if (firestorePassword == null) {
@@ -128,7 +165,34 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
             return;
           }
           if (firestorePassword == trimmedPassword) {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            // Store the Firestore doc ID so profile screen can find it
+            final docId = query.docs.first.id;
+            SessionManager.setCustomerDocId(docId);
+
+            // Try to establish Firebase Auth session
+            try {
+              await _ensureFirebaseAuthAccount(lowerEmail, trimmedPassword);
+              // If Firebase Auth succeeded, also migrate profile doc
+              final currentUser = FirebaseAuth.instance.currentUser;
+              if (currentUser != null && docId != currentUser.uid) {
+                final migrateData = Map<String, dynamic>.from(data);
+                migrateData['uid'] = currentUser.uid;
+                await FirebaseFirestore.instance
+                    .collection('customers')
+                    .doc(currentUser.uid)
+                    .set(migrateData, SetOptions(merge: true));
+                SessionManager.setCustomerDocId(currentUser.uid);
+              }
+            } catch (_) {
+              // Firebase Auth failed — continue with Firestore doc ID only
+            }
+
+            if (!mounted) return;
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
             return;
           } else {
             setState(() {
