@@ -37,5 +37,18 @@ import 'package:image_picker/image_picker.dart';
             });
         }
     }
+
+    @override 
+    Widget build (BuildContext context){
+
+        return Scaffold(
+
+            //App bar at the top 
+            appBar: AppBar(
+                title: const Text("Rate Service"),
+                centerTitle: true,
+            ),
+        )
+    }
     
  }
