@@ -199,6 +199,41 @@ import 'package:image_picker/image_picker.dart';
               ],
             ),
 
+             const SizedBox(height: 15),
+
+            // IMAGE PREVIEW SECTION
+
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+
+              children: images.map((img) {
+
+                return Stack(
+                  children: [
+
+                    Image.file(
+                      img,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
+
+                    Positioned(
+                      right: 0,
+                      top: 0,
+
+                      child: GestureDetector(
+
+                        onTap: () {
+
+                       
+                          setState(() {
+                            images.remove(img);
+                          });
+
+                        },
+
 
         )
     }
