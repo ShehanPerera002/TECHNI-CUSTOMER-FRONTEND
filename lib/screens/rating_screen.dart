@@ -154,6 +154,35 @@ import 'package:image_picker/image_picker.dart';
               ),
             ),
 
+             const SizedBox(height: 25),
+
+            
+            // COMMENT SECTION
+            
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Comments (Optional)",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            TextField(
+              controller: commentController,
+              maxLines: 4,
+
+              decoration: InputDecoration(
+                hintText: "Tell us more about your experience...",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
         )
     }
     
