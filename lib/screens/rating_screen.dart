@@ -100,8 +100,6 @@ import 'package:image_picker/image_picker.dart';
 
               child: Column(
                 children: [
-
-                  /// Rating title
                   const Text(
                     "How was your service?",
                     style: TextStyle(
@@ -120,13 +118,11 @@ import 'package:image_picker/image_picker.dart';
                     itemCount: 5,
                     itemSize: 35,
 
-                    // Star icon
                     itemBuilder: (context, _) => const Icon(
                       Icons.star,
                       color: Colors.amber,
                     ),
 
-                    // When user changes rating
                     onRatingUpdate: (value) {
 
                       setState(() {
@@ -157,7 +153,7 @@ import 'package:image_picker/image_picker.dart';
              const SizedBox(height: 25),
 
             
-            // COMMENT SECTION
+            // Comment section
             
             const Align(
               alignment: Alignment.centerLeft,
@@ -185,7 +181,7 @@ import 'package:image_picker/image_picker.dart';
 
              const SizedBox(height: 20),
 
-            //IMAGE UPLOAD BUTTON
+            //Image upload button
 
             Row(
               children: [
@@ -201,7 +197,7 @@ import 'package:image_picker/image_picker.dart';
 
              const SizedBox(height: 15),
 
-            // IMAGE PREVIEW SECTION
+            // Image preiview section
 
             Wrap(
               spacing: 10,
@@ -222,20 +218,71 @@ import 'package:image_picker/image_picker.dart';
                     Positioned(
                       right: 0,
                       top: 0,
-
                       child: GestureDetector(
-
                         onTap: () {
-
-                       
                           setState(() {
                             images.remove(img);
                           });
 
                         },
+                         child: const CircleAvatar(
+                          radius: 10,
+                          backgroundColor: Colors.red,
+                          child: Icon(
+                            Icons.close,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+
+                  ],
+                );
+
+              }).toList(),
+            ),
+
+            const SizedBox(height: 30),
+
+           
+            // Submit button
+
+            SizedBox(
+              width: double.infinity,
+
+              child: ElevatedButton(
+
+                onPressed: () {
+                  print("Rating: $rating");
+                  print("Comment: ${commentController.text}");
+                  print("Images: ${images.length}");
+
+                },
+
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+
+                child: const Text(
+                  "Submit Review",
+                  style: TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 
-        )
-    }
     
- }
