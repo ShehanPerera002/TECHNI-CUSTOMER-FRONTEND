@@ -15,3 +15,13 @@ import 'package:image_picker/image_picker.dart';
     State<RatingScreen> createState() => _RatingScreenState();
  }
  
+ class _RatingScreenState extends State<RatingScreen>{
+
+    // deafult rating value 
+    double rating = 4;
+
+    final TextEditingController commentController = TextEditingController();
+    final ImagePicker picker = ImagePicker();
+
+    List<File> images = [];
+ }
