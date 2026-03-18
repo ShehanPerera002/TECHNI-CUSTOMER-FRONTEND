@@ -48,6 +48,44 @@ import 'package:image_picker/image_picker.dart';
                 title: const Text("Rate Service"),
                 centerTitle: true,
             ),
+
+             
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+
+          children: [
+
+            /
+
+            const CircleAvatar(
+              radius: 40,
+
+              // Worker profile image
+              backgroundImage: NetworkImage(
+                "https://i.pravatar.cc/150?img=3",
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            const Text(
+              "Saman Perera",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const Text(
+              "Professional Plumber",
+              style: TextStyle(
+                color: Colors.blue,
+              ),
+            ), 
+
         )
     }
     
