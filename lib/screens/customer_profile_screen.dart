@@ -31,6 +31,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   Future<Map<String, dynamic>?> _loadProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      print('[DEBUG] No current user in FirebaseAuth');
       return null;
     }
 
@@ -39,7 +40,12 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         .doc(user.uid)
         .get();
 
-    return doc.data();
+    print('[DEBUG] Checking profile for UID: \\${user.uid}');
+    print('[DEBUG] Document exists: \\${doc.exists}');
+    print('[DEBUG] Document data: \\${doc.data()}');
+
+    final data = doc.data();
+    return data;
   }
 
   ImageProvider? _profileImageProvider(String? imagePath) {

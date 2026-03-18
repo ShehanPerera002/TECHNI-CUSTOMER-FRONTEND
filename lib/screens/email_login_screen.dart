@@ -67,6 +67,9 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
 
     final String email = _emailController.text.trim();
     final String password = _passwordController.text;
+    final String trimmedEmail = email.trim();
+    final String lowerEmail = trimmedEmail.toLowerCase();
+    final String trimmedPassword = password.trim();
 
     try {
       await _ensureFirebaseAuthAccount(email, password);
@@ -84,37 +87,72 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         if (!mounted) return;
 
         if (doc.exists) {
-          // Profile exists → go to home
           Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          return;
         } else {
-          // No profile → go to create profile
           Navigator.pushNamedAndRemoveUntil(
             context,
             '/createProfile',
             (route) => false,
             arguments: {'phone': '', 'email': email},
           );
+          return;
         }
       }
-    } on FirebaseAuthException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        if (error.code == 'wrong-password' ||
-            error.code == 'invalid-credential' ||
-            error.code == 'invalid-email') {
-          _errorText = 'Incorrect email or password.';
-        } else if (error.code == 'operation-not-allowed') {
-          _errorText =
-              'Email/password login is disabled in Firebase Authentication.';
-        } else if (error.code == 'admin-restricted-operation') {
-          _errorText =
-              'This operation is restricted by Firebase settings. Please enable Email/Password sign-in method.';
-        } else {
-          _errorText = error.message ?? 'Failed to login. Please try again.';
+    } on FirebaseAuthException {
+      // If Firebase Auth login fails, try Firestore-based login (INSECURE)
+      try {
+        QuerySnapshot query = await FirebaseFirestore.instance
+            .collection('customers')
+            .where('email', isEqualTo: trimmedEmail)
+            .limit(1)
+            .get();
+        if (query.docs.isEmpty) {
+          query = await FirebaseFirestore.instance
+              .collection('customers')
+              .where('emailLower', isEqualTo: lowerEmail)
+              .limit(1)
+              .get();
         }
-      });
+        print('[DEBUG] Firestore query docs count: ${query.docs.length}');
+        if (query.docs.isNotEmpty) {
+          final data = query.docs.first.data() as Map<String, dynamic>;
+          print('[DEBUG] Firestore login data: $data');
+          final firestorePassword = data['password']?.toString().trim();
+          print('[DEBUG] Firestore password: ${firestorePassword ?? 'null'}');
+          print('[DEBUG] Entered password: $trimmedPassword');
+          if (firestorePassword == null) {
+            setState(() {
+              _errorText = 'No password set for this user in Firestore.';
+            });
+            return;
+          }
+          if (firestorePassword == trimmedPassword) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
+            return;
+          } else {
+            setState(() {
+              _errorText = 'Incorrect email or password.';
+            });
+            return;
+          }
+        } else {
+          setState(() {
+            _errorText = 'No user found with this email.';
+          });
+          print('[DEBUG] No user found with this email in Firestore.');
+        }
+      } catch (e) {
+        print('[DEBUG] Firestore login error: $e');
+        setState(() {
+          _errorText = 'Failed to login. Please try again.';
+        });
+      }
     } catch (_) {
-      if (!mounted) return;
       setState(() {
         _errorText = 'Failed to login. Please try again.';
       });
