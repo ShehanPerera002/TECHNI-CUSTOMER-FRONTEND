@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LocationPickerScreen extends StatefulWidget {
@@ -16,16 +17,57 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  // ignore: unused_field
-  late GoogleMapController _mapController;
+  GoogleMapController? _mapController;
   LatLng? _selectedLocation;
+  LatLng _cameraTarget = _sriLankaCenter;
   final Set<Marker> _markers = {};
+
+  /// Sri Lanka center (approximate)
+  static const LatLng _sriLankaCenter = LatLng(7.8731, 80.7718);
 
   @override
   void initState() {
     super.initState();
+
     _selectedLocation = LatLng(widget.initialLatitude, widget.initialLongitude);
+    _cameraTarget = _selectedLocation ?? _sriLankaCenter;
     _updateMarker();
+
+    // Try to center on the device's current location (like PickMe does).
+    _setCurrentLocationAsCenter();
+  }
+
+  Future<void> _setCurrentLocationAsCenter() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final currentLatLng = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _cameraTarget = currentLatLng;
+        _selectedLocation = currentLatLng;
+        _updateMarker();
+      });
+
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(currentLatLng, 14.0),
+        );
+      }
+    } catch (_) {
+      // If fetching location fails, we'll keep the default Sri Lanka center.
+    }
   }
 
   void _updateMarker() {
@@ -101,11 +143,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: LatLng(widget.initialLatitude, widget.initialLongitude),
-              zoom: 10.0, // Zoom level suitable for Sri Lanka
+              target: _cameraTarget,
+              zoom: 7.8, // Zoom level suitable for Sri Lanka
             ),
             onMapCreated: (controller) {
               _mapController = controller;
+
+              // If we already have a selected location, animate to it so the marker is visible.
+              if (_selectedLocation != null) {
+                _mapController!.animateCamera(
+                  CameraUpdate.newLatLngZoom(_selectedLocation!, 14.0),
+                );
+              }
             },
             onTap: _onMapTap,
             markers: _markers,
