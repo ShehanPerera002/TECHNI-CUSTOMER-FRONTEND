@@ -5,7 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 class TrackingService {
-  static const _apiKey = 'YOUR_API_KEY_HERE';
+  static const _apiKey = 'AIzaSyCl4f-KS1P_N1a34qO06IXsR933PfMwi3I';
 
   /// Stream worker's live location from Firestore
   static Stream<LatLng> workerLocationStream(String workerId) {
