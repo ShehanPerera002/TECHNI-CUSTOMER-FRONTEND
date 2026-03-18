@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../models/professional.dart';
 import 'connecting_worker_screen.dart';
@@ -22,7 +22,7 @@ class FindProfessionalScreen extends StatefulWidget {
 class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   static const _userLocation = LatLng(6.9271, 79.8612);
   late List<Professional> _professionals;
-    // final String _paymentMethod = 'Cash'; // Removed unused field
+  // final String _paymentMethod = 'Cash'; // Removed unused field
   String _language = 'Sinhala';
   Timer? _movementTimer;
   final Random _random = Random();
@@ -39,6 +39,9 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
 
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
 
+  GoogleMapController? _mapController;
+  LatLng _customerLatLng = _userLocation;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +49,26 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
       Professional.getDummyForCategory(widget.serviceTitle),
     );
     _startLiveMovement();
+    _initCustomerLocation();
+  }
+
+  Future<void> _initCustomerLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    final pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _customerLatLng = LatLng(pos.latitude, pos.longitude);
+    });
+
+    _mapController?.animateCamera(CameraUpdate.newLatLng(_customerLatLng));
   }
 
   void _findWorker() {
@@ -218,6 +241,39 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
     });
   }
 
+  Set<Marker> _buildMarkers() {
+    final markers = <Marker>{};
+
+    // Customer marker
+    markers.add(
+      Marker(
+        markerId: const MarkerId('customer'),
+        position: _customerLatLng,
+        infoWindow: const InfoWindow(title: 'Your Location'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+      ),
+    );
+
+    // Worker markers
+    for (final p in _professionals) {
+      markers.add(
+        Marker(
+          markerId: MarkerId(p.id),
+          position: p.location,
+          infoWindow: InfoWindow(
+            title: p.name,
+            snippet: '${p.timeToBook} away • ⭐ ${p.rating}',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueOrange,
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
   @override
   void dispose() {
     _movementTimer?.cancel();
@@ -255,53 +311,16 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   }
 
   Widget _buildMap() {
-    return FlutterMap(
-      options: MapOptions(
-        initialCenter: _userLocation,
-        initialZoom: 15,
-        minZoom: 13,
-        maxZoom: 18,
+    return GoogleMap(
+      initialCameraPosition: const CameraPosition(
+        target: _userLocation,
+        zoom: 15,
       ),
-      children: [
-        TileLayer(
-          urlTemplate:
-              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        ),
-        MarkerLayer(
-          markers: _professionals
-              .map(
-                (p) => Marker(
-                  point: p.location,
-                  width: 44,
-                  height: 44,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.network(
-                        p.avatarUrl,
-                        fit: BoxFit.cover,
-                        width: 40,
-                        height: 40,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Container(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ],
+      onMapCreated: (controller) => _mapController = controller,
+      markers: _buildMarkers(),
+      myLocationEnabled: true,
+      myLocationButtonEnabled: true,
+      zoomControlsEnabled: false,
     );
   }
 

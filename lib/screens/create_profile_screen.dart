@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/cloudinary_service.dart';
+import 'location_picker_screen.dart';
 
 class CreateProfileScreen extends StatefulWidget {
   const CreateProfileScreen({super.key});
@@ -29,6 +31,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   File? _selectedImage;
   String? _phone;
   String? _prefilledEmail;
+
+  // Location variables
+  double? _latitude;
+  double? _longitude;
+  String? _selectedAddress;
+  bool _isGettingLocation = false;
 
   bool _isFormValid = false;
   bool _isSaving = false;
@@ -110,6 +118,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     final String password = _passwordController.text;
     final String confirmPassword = _confirmPasswordController.text;
 
+    // Location is valid if either coordinates are set OR address is manually entered
+    final bool hasLocation =
+        (_latitude != null && _longitude != null) ||
+        _addressController.text.trim().isNotEmpty;
+
     bool isValid =
         _nameController.text.trim().isNotEmpty &&
         _birthDateController.text.trim().isNotEmpty &&
@@ -117,7 +130,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         _emailController.text.contains("@") &&
         _isPasswordValid(password) &&
         confirmPassword == password &&
-        _addressController.text.trim().isNotEmpty &&
+        hasLocation &&
         _selectedImage != null;
 
     setState(() {
@@ -158,6 +171,98 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         _birthDateController.text =
             "${picked.day}/${picked.month}/${picked.year}";
       });
+    }
+  }
+
+  // Get Current Location
+  Future<void> _getCurrentLocation() async {
+    if (_isGettingLocation) return;
+
+    setState(() {
+      _isGettingLocation = true;
+    });
+
+    try {
+      // Check location permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission denied')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Location permission permanently denied. Please enable in settings.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _selectedAddress =
+            'Current Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+        _addressController.text = _selectedAddress!;
+      });
+
+      _validateForm();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location updated successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGettingLocation = false;
+        });
+      }
+    }
+  }
+
+  // Open Map Picker
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLatitude: _latitude ?? 7.8731, // Sri Lanka center
+          initialLongitude: _longitude ?? 80.7718,
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _latitude = result['latitude'];
+        _longitude = result['longitude'];
+        _selectedAddress =
+            result['address'] ??
+            'Selected Location (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})';
+        _addressController.text = _selectedAddress!;
+      });
+      _validateForm();
     }
   }
 
@@ -233,18 +338,14 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       // If not signed in or signed in anonymously, create a new user with email/password
       if (authUser == null || (authUser.isAnonymous)) {
         try {
-          final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
+          final userCredential = await FirebaseAuth.instance
+              .createUserWithEmailAndPassword(email: email, password: password);
           authUser = userCredential.user;
         } on FirebaseAuthException catch (e) {
           if (e.code == 'email-already-in-use') {
             // If email already in use, try to sign in
-            final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-              email: email,
-              password: password,
-            );
+            final userCredential = await FirebaseAuth.instance
+                .signInWithEmailAndPassword(email: email, password: password);
             authUser = userCredential.user;
           } else if (e.code == 'weak-password') {
             if (!mounted) return;
@@ -261,7 +362,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
           } else if (e.code == 'operation-not-allowed') {
             if (!mounted) return;
             setState(() {
-              _errorText = 'Email/password sign-in is disabled in Firebase Authentication.';
+              _errorText =
+                  'Email/password sign-in is disabled in Firebase Authentication.';
             });
             return;
           } else {
@@ -302,8 +404,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
         'emailLower': email.toLowerCase(),
         'fullName': _nameController.text.trim(),
         'isVerified': true,
-        'latitude': 0.0,
-        'longitude': 0.0,
+        'latitude': _latitude ?? 0.0,
+        'longitude': _longitude ?? 0.0,
         'password': _passwordController.text,
         'phone': (_phone != null && _phone!.isNotEmpty) ? _phone! : '',
         'role': 'customer',
@@ -567,44 +669,72 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF2563EB),
-                            width: 1.5,
+                      GestureDetector(
+                        onTap: _isGettingLocation ? null : _getCurrentLocation,
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF2563EB),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                color: Color(0xFF2563EB),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  "Use your current location",
-                                  style: TextStyle(color: Color(0xFF2563EB)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF2563EB),
                                 ),
-                              ),
-                              Icon(
-                                Icons.arrow_circle_right,
-                                color: Color(0xFF2563EB),
-                              ),
-                            ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _isGettingLocation
+                                        ? "Getting location..."
+                                        : "Use your current location",
+                                    style: const TextStyle(
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  _isGettingLocation
+                                      ? Icons.hourglass_empty
+                                      : Icons.arrow_circle_right,
+                                  color: const Color(0xFF2563EB),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
 
                       const SizedBox(height: 15),
 
-                      _buildTextField(
-                        controller: _addressController,
-                        hint: "or Enter address manually",
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _addressController,
+                              hint: "or Enter address manually",
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: _openMapPicker,
+                            child: Container(
+                              width: 50,
+                              height: 55,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.map, color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 30),

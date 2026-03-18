@@ -165,29 +165,6 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
             return;
           }
           if (firestorePassword == trimmedPassword) {
-            // Store the Firestore doc ID so profile screen can find it
-            final docId = query.docs.first.id;
-            SessionManager.setCustomerDocId(docId);
-
-            // Try to establish Firebase Auth session
-            try {
-              await _ensureFirebaseAuthAccount(lowerEmail, trimmedPassword);
-              // If Firebase Auth succeeded, also migrate profile doc
-              final currentUser = FirebaseAuth.instance.currentUser;
-              if (currentUser != null && docId != currentUser.uid) {
-                final migrateData = Map<String, dynamic>.from(data);
-                migrateData['uid'] = currentUser.uid;
-                await FirebaseFirestore.instance
-                    .collection('customers')
-                    .doc(currentUser.uid)
-                    .set(migrateData, SetOptions(merge: true));
-                SessionManager.setCustomerDocId(currentUser.uid);
-              }
-            } catch (_) {
-              // Firebase Auth failed — continue with Firestore doc ID only
-            }
-
-            if (!mounted) return;
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/home',
