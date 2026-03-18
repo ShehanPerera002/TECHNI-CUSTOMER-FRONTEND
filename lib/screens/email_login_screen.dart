@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../core/session_manager.dart';
 
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
@@ -87,9 +88,45 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         if (!mounted) return;
 
         if (doc.exists) {
+          SessionManager.setCustomerDocId(user.uid);
           Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
           return;
         } else {
+          // Profile might exist under a different UID (e.g., from phone auth sign-up)
+          final emailQuery = await FirebaseFirestore.instance
+              .collection('customers')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+          // Also try case-insensitive lookup
+          final QuerySnapshot effectiveQuery;
+          if (emailQuery.docs.isNotEmpty) {
+            effectiveQuery = emailQuery;
+          } else {
+            effectiveQuery = await FirebaseFirestore.instance
+                .collection('customers')
+                .where('emailLower', isEqualTo: email.toLowerCase())
+                .limit(1)
+                .get();
+          }
+
+          if (!mounted) return;
+
+          if (effectiveQuery.docs.isNotEmpty) {
+            // Migrate profile to current auth UID
+            final existingData = Map<String, dynamic>.from(effectiveQuery.docs.first.data() as Map);
+            existingData['uid'] = user.uid;
+            await FirebaseFirestore.instance
+                .collection('customers')
+                .doc(user.uid)
+                .set(existingData, SetOptions(merge: true));
+
+            SessionManager.setCustomerDocId(user.uid);
+            if (!mounted) return;
+            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            return;
+          }
+
           Navigator.pushNamedAndRemoveUntil(
             context,
             '/createProfile',

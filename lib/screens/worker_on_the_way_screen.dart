@@ -7,8 +7,6 @@ import '../core/booking_service.dart';
 import '../core/tracking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
-import 'in_app_call_screen.dart';
-import 'in_app_chat_screen.dart';
 
 class WorkerOnTheWayScreen extends StatefulWidget {
   final Professional professional;
@@ -278,6 +276,7 @@ class _TripSheet extends StatefulWidget {
 
 class _TripSheetState extends State<_TripSheet> {
   static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
+  // final String _paymentMethod = _paymentOptions.first; // Removed unused field
   String _language = _languageOptions.first;
 
   void _confirmWork() {
@@ -389,15 +388,11 @@ class _TripSheetState extends State<_TripSheet> {
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => InAppChatScreen(
-                            professional: widget.professional,
-                          ),
-                        ),
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.chat_bubble_outline,
+                        color: Colors.grey,
                       ),
-                      icon: const Icon(Icons.chat_bubble_outline),
                     ),
                     const SizedBox(width: 6),
                     IconButton(

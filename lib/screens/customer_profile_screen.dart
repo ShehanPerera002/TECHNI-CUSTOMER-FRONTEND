@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/session_manager.dart';
 import 'edit_customer_profile_screen.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
@@ -29,23 +30,61 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   }
 
   Future<Map<String, dynamic>?> _loadProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print('[DEBUG] No current user in FirebaseAuth');
-      return null;
+    // 1. Try SessionManager doc ID first (set during login)
+    final sessionDocId = SessionManager.customerDocId;
+    if (sessionDocId != null && sessionDocId.isNotEmpty) {
+      print('[DEBUG] Trying SessionManager doc ID: $sessionDocId');
+      final doc = await FirebaseFirestore.instance
+          .collection('customers')
+          .doc(sessionDocId)
+          .get();
+      if (doc.exists) {
+        print('[DEBUG] Profile found via SessionManager doc ID');
+        return doc.data();
+      }
     }
 
-    final doc = await FirebaseFirestore.instance
-        .collection('customers')
-        .doc(user.uid)
-        .get();
+    // 2. Try Firebase Auth UID
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      print('[DEBUG] Trying Firebase Auth UID: ${user.uid}');
+      final doc = await FirebaseFirestore.instance
+          .collection('customers')
+          .doc(user.uid)
+          .get();
+      if (doc.exists) {
+        print('[DEBUG] Profile found via Firebase Auth UID');
+        return doc.data();
+      }
 
-    print('[DEBUG] Checking profile for UID: \\${user.uid}');
-    print('[DEBUG] Document exists: \\${doc.exists}');
-    print('[DEBUG] Document data: \\${doc.data()}');
+      // 3. Fallback: query by email
+      final email = user.email;
+      if (email != null && email.isNotEmpty) {
+        print('[DEBUG] Trying email fallback: $email');
+        var query = await FirebaseFirestore.instance
+            .collection('customers')
+            .where('email', isEqualTo: email)
+            .limit(1)
+            .get();
+        if (query.docs.isEmpty) {
+          query = await FirebaseFirestore.instance
+              .collection('customers')
+              .where('emailLower', isEqualTo: email.toLowerCase())
+              .limit(1)
+              .get();
+        }
+        if (query.docs.isNotEmpty) {
+          print('[DEBUG] Profile found via email query');
+          final data = query.docs.first.data();
+          // Cache the doc ID for future lookups
+          SessionManager.setCustomerDocId(query.docs.first.id);
+          return data;
+        }
+      }
+    }
 
-    final data = doc.data();
-    return data;
+    print('[DEBUG] No profile found by any method');
+    return null;
   }
 
   ImageProvider? _profileImageProvider(String? imagePath) {
@@ -116,6 +155,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
   Future<void> _logout() async {
     try {
+      SessionManager.clear();
       await FirebaseAuth.instance.signOut();
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
