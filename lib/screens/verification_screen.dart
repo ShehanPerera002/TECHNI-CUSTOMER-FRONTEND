@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:technni_customer/screens/success_screen.dart';
 import '../core/assets.dart';
 import '../core/firebase_phone_auth_service.dart';
+import '../core/session_manager.dart';
 import '../widgets/techni_logo.dart';
 
 class VerificationScreen extends StatefulWidget {
@@ -92,6 +94,50 @@ class _VerificationScreenState extends State<VerificationScreen> {
     _checkOtpComplete();
   }
 
+  Future<void> _handleSuccessfulVerification() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        var doc = await FirebaseFirestore.instance
+            .collection('customers')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists && _phone != null) {
+          final query = await FirebaseFirestore.instance
+              .collection('customers')
+              .where('phone', isEqualTo: _phone)
+              .limit(1)
+              .get();
+          if (query.docs.isNotEmpty) {
+            doc = query.docs.first;
+          }
+        }
+
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          final verificationStatus = data['verificationStatus']?.toString().trim().toLowerCase();
+          if (verificationStatus == 'verified') {
+            if (!mounted) return;
+            SessionManager.setCustomerDocId(doc.id);
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/home', (route) => false);
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint("Error checking verification status: $e");
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(
+      context,
+      '/createProfile',
+      arguments: {'phone': _phone ?? ''},
+    );
+  }
+
   Future<void> _continueToNext() async {
     if (!_isOtpComplete) return;
 
@@ -117,12 +163,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SuccessScreen(phone: _phone ?? ''),
-        ),
-      );
+      await _handleSuccessfulVerification();
     } on PhoneAuthFailure catch (error) {
       if (!mounted) return;
       setState(() {
@@ -161,12 +202,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
       if (!mounted) return;
 
       if (result.autoVerified) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SuccessScreen(phone: _phone ?? ''),
-          ),
-        );
+        await _handleSuccessfulVerification();
         return;
       }
 

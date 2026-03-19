@@ -538,22 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.black87,
               ),
             ),
-            GestureDetector(
-              onTap: () {},
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2563EB),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
+            const SizedBox.shrink(),
           ],
         ),
         const SizedBox(height: 16),
