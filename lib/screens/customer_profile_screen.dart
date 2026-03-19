@@ -15,12 +15,23 @@ class CustomerProfileScreen extends StatefulWidget {
 }
 
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
-  late Future<Map<String, dynamic>?> _profileFuture;
+  Future<Map<String, dynamic>?>? _profileFuture;
+  String? _lastLoadedDocId;
 
   @override
   void initState() {
     super.initState();
     _profileFuture = _loadProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload if the session doc ID changed since last load
+    final currentDocId = SessionManager.customerDocId;
+    if (currentDocId != null && currentDocId != _lastLoadedDocId) {
+      _reloadProfile();
+    }
   }
 
   void _reloadProfile() {
@@ -30,6 +41,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   }
 
   Future<Map<String, dynamic>?> _loadProfile() async {
+    // Track which doc ID we loaded for
+    _lastLoadedDocId = SessionManager.customerDocId;
+
     // 1. Try SessionManager doc ID first (set during login)
     final sessionDocId = SessionManager.customerDocId;
     if (sessionDocId != null && sessionDocId.isNotEmpty) {
@@ -187,7 +201,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _profileFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (_profileFuture == null || snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
