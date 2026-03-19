@@ -277,8 +277,6 @@ class _TripSheet extends StatefulWidget {
 }
 
 class _TripSheetState extends State<_TripSheet> {
-  static const _languageOptions = ['Sinhala', 'English', 'Tamil'];
-  String _language = _languageOptions.first;
 
   void _confirmWork() {
     BookingService.instance.completeBooking(
@@ -447,17 +445,6 @@ class _TripSheetState extends State<_TripSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Language dropdown
-                _SelectionDropdown(
-                  icon: Icons.language,
-                  value: _language,
-                  items: _languageOptions,
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _language = value);
-                  },
-                ),
-                const SizedBox(height: 12),
                 // Confirm button
                 SizedBox(
                   height: 48,
@@ -490,55 +477,4 @@ class _TripSheetState extends State<_TripSheet> {
     );
   }
 }
-
-class _SelectionDropdown extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
-
-  const _SelectionDropdown({
-    required this.icon,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFD8D8D8)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          onChanged: onChanged,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down),
-          items: items
-              .map(
-                (item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Row(
-                    children: [
-                      Icon(icon, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        item,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
-  }
-}
+
