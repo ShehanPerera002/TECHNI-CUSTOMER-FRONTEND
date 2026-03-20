@@ -1,6 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:technni_customer/screens/success_screen.dart';
 import '../core/assets.dart';
+import '../core/firebase_phone_auth_service.dart';
+import '../core/session_manager.dart';
+import '../widgets/techni_logo.dart';
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({super.key});
@@ -18,11 +22,34 @@ class _VerificationScreenState extends State<VerificationScreen> {
   );
 
   bool _isOtpComplete = false;
+  bool _isSubmitting = false;
+  bool _isResending = false;
+  String? _errorText;
+
+  String? _phone;
+  String? _verificationId;
+  int? _resendToken;
+  bool _argsLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _focusNodes[0].requestFocus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_argsLoaded) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _phone = args['phone'] as String?;
+      _verificationId = args['verificationId'] as String?;
+      _resendToken = args['resendToken'] as int?;
+    }
+
+    _argsLoaded = true;
   }
 
   @override
@@ -50,6 +77,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
         _focusNodes[index + 1].requestFocus();
       } else {
         _focusNodes[index].unfocus();
+        // Auto-submit when all 6 digits are entered
+        Future.microtask(() {
+          _checkOtpComplete();
+          if (_isOtpComplete) _continueToNext();
+        });
+        return;
       }
     } else {
       // Move back on delete
@@ -61,13 +94,147 @@ class _VerificationScreenState extends State<VerificationScreen> {
     _checkOtpComplete();
   }
 
-  void _verifyOtp() {
+  Future<void> _handleSuccessfulVerification() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        var doc = await FirebaseFirestore.instance
+            .collection('customers')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists && _phone != null) {
+          final query = await FirebaseFirestore.instance
+              .collection('customers')
+              .where('phone', isEqualTo: _phone)
+              .limit(1)
+              .get();
+          if (query.docs.isNotEmpty) {
+            doc = query.docs.first;
+          }
+        }
+
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          final verificationStatus = data['verificationStatus']?.toString().trim().toLowerCase();
+          if (verificationStatus == 'verified') {
+            if (!mounted) return;
+            SessionManager.setCustomerDocId(doc.id);
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/home', (route) => false);
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint("Error checking verification status: $e");
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(
+      context,
+      '/createProfile',
+      arguments: {'phone': _phone ?? ''},
+    );
+  }
+
+  Future<void> _continueToNext() async {
     if (!_isOtpComplete) return;
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const SuccessScreen()),
-    );
+    if (_phone == null || _phone!.isEmpty || _verificationId == null) {
+      setState(() {
+        _errorText = 'Verification session expired. Please sign in again.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+
+    final otp = _controllers.map((e) => e.text).join();
+
+    try {
+      await FirebasePhoneAuthService.verifyOtp(
+        verificationId: _verificationId!,
+        otp: otp,
+      );
+
+      if (!mounted) return;
+
+      await _handleSuccessfulVerification();
+    } on PhoneAuthFailure catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = 'OTP verification failed. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _resendCode() async {
+    if (_phone == null || _phone!.isEmpty || _isResending || _isSubmitting) {
+      return;
+    }
+
+    setState(() {
+      _isResending = true;
+      _errorText = null;
+    });
+
+    try {
+      final result = await FirebasePhoneAuthService.sendOtp(
+        phone: _phone!,
+        forceResendingToken: _resendToken,
+      );
+
+      if (!mounted) return;
+
+      if (result.autoVerified) {
+        await _handleSuccessfulVerification();
+        return;
+      }
+
+      if (result.verificationId == null || result.verificationId!.isEmpty) {
+        throw const PhoneAuthFailure('Could not resend OTP. Please try again.');
+      }
+
+      setState(() {
+        _verificationId = result.verificationId;
+        _resendToken = result.resendToken;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('OTP code resent successfully.')),
+      );
+    } on PhoneAuthFailure catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = 'Failed to resend OTP. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResending = false;
+        });
+      }
+    }
   }
 
   @override
@@ -82,7 +249,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
             children: [
               const SizedBox(height: 20),
 
-              Image.asset(AppAssets.welcomeLogo, height: 28),
+              const TechniLogo(),
 
               const SizedBox(height: 40),
 
@@ -123,7 +290,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
                       maxLength: 1,
+                      textInputAction: index == 5
+                          ? TextInputAction.done
+                          : TextInputAction.next,
                       onChanged: (value) => _onOtpChanged(value, index),
+                      onSubmitted: index == 5 ? (_) => _continueToNext() : null,
                       decoration: InputDecoration(
                         counterText: "",
                         enabledBorder: OutlineInputBorder(
@@ -148,20 +319,37 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
               const SizedBox(height: 20),
 
-              const Center(
-                child: Text.rich(
-                  TextSpan(
-                    text: "Didn’t receive the code? ",
-                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-                    children: [
-                      TextSpan(
-                        text: "Resend Code",
-                        style: TextStyle(
-                          color: Color(0xFF2563EB),
-                          fontWeight: FontWeight.w500,
-                        ),
+              if (_errorText != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Center(
+                    child: Text(
+                      _errorText!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ),
+
+              Center(
+                child: GestureDetector(
+                  onTap: _isResending ? null : _resendCode,
+                  child: Text.rich(
+                    TextSpan(
+                      text: "Didn't receive the code? ",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
                       ),
-                    ],
+                      children: [
+                        TextSpan(
+                          text: _isResending ? 'Resending...' : 'Resend Code',
+                          style: const TextStyle(
+                            color: Color(0xFF2563EB),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -169,22 +357,26 @@ class _VerificationScreenState extends State<VerificationScreen> {
               const Spacer(),
 
               GestureDetector(
-                onTap: _isOtpComplete ? _verifyOtp : null,
+                onTap: _isOtpComplete && !_isSubmitting
+                    ? _continueToNext
+                    : null,
                 child: Container(
                   width: double.infinity,
                   height: 55,
                   decoration: BoxDecoration(
-                    gradient: _isOtpComplete
+                    gradient: _isOtpComplete && !_isSubmitting
                         ? const LinearGradient(
                             colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
                           )
                         : null,
-                    color: _isOtpComplete ? null : Colors.grey.shade400,
+                    color: _isOtpComplete && !_isSubmitting
+                        ? null
+                        : Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      "Verify",
+                      _isSubmitting ? 'Verifying...' : 'Continue',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,

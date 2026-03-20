@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/assets.dart';
+import 'email_login_screen.dart';
 import '../widgets/primary_button.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -78,7 +79,14 @@ class WelcomeScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.black87),
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/signin'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EmailLoginScreen(),
+                          ),
+                        );
+                      },
                       child: const Text(
                         "Login",
                         style: TextStyle(
