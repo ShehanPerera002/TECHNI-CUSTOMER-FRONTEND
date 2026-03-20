@@ -2,18 +2,22 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/professional.dart';
+import '../models/job_request.dart';
 import 'worker_approval_screen.dart';
 
 class ConnectingWorkerScreen extends StatefulWidget {
   final List<Professional> professionals;
   final String serviceTitle;
+  final String? jobRequestId;
 
   const ConnectingWorkerScreen({
     super.key,
     required this.professionals,
     required this.serviceTitle,
+    this.jobRequestId,
   });
 
   @override
@@ -22,6 +26,7 @@ class ConnectingWorkerScreen extends StatefulWidget {
 
 class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
   Timer? _progressTimer;
+  StreamSubscription<DocumentSnapshot>? _jobSubscription;
   double _progress = 0.0;
   late Professional _assignedProfessional;
   late List<Professional> _remainingProfessionals;
@@ -49,18 +54,69 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
       return;
     }
 
-    final random = Random();
-    final index = random.nextInt(_remainingProfessionals.length);
-    _assignedProfessional = _remainingProfessionals[index];
-    _remainingProfessionals.removeAt(index);
-
     _progressTimer?.cancel();
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (!mounted) return;
-      setState(() => _progress = (_progress + 0.03).clamp(0.0, 1.0));
-      if (_progress >= 1.0) {
-        timer.cancel();
+      // Loop visual progress up to 90%
+      if (_progress < 0.9) {
+        setState(() => _progress = (_progress + 0.05).clamp(0.0, 0.9));
+      }
+    });
+
+    if (widget.jobRequestId != null) {
+      _listenToJobRequest();
+    } else {
+      // Fallback mock flow
+      final random = Random();
+      final index = random.nextInt(_remainingProfessionals.length);
+      _assignedProfessional = _remainingProfessionals[index];
+      _remainingProfessionals.removeAt(index);
+      
+      Future.delayed(const Duration(seconds: 3), () {
+        if (!mounted) return;
+        _progressTimer?.cancel();
+        setState(() => _progress = 1.0);
         _showApprovalScreen();
+      });
+    }
+  }
+
+  void _listenToJobRequest() {
+    _jobSubscription?.cancel();
+    _jobSubscription = FirebaseFirestore.instance
+        .collection('jobRequests')
+        .doc(widget.jobRequestId)
+        .snapshots()
+        .listen((snapshot) async {
+      if (!snapshot.exists) return;
+      
+      final jobReq = JobRequest.fromFirestore(snapshot);
+      if (jobReq.status == 'workerFound' && jobReq.workerId != null) {
+        _jobSubscription?.cancel();
+        _progressTimer?.cancel();
+        if (!mounted) return;
+        setState(() => _progress = 1.0);
+        
+        // Fetch real worker details
+        try {
+          final workerDoc = await FirebaseFirestore.instance.collection('workers').doc(jobReq.workerId).get();
+          if (workerDoc.exists && mounted) {
+            _assignedProfessional = Professional.fromFirestore(workerDoc);
+            _showApprovalScreen();
+            return;
+          }
+        } catch (e) {
+          debugPrint('Error fetching assigned worker: $e');
+        }
+        
+        // Fallback to _professionals list if fetching fails
+        if (mounted) {
+          _assignedProfessional = widget.professionals.firstWhere(
+            (p) => p.id == jobReq.workerId,
+            orElse: () => widget.professionals.first,
+          );
+          _showApprovalScreen();
+        }
       }
     });
   }
@@ -71,12 +127,20 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
         builder: (_) => WorkerApprovalScreen(
           professional: _assignedProfessional,
           serviceTitle: widget.serviceTitle,
+          jobRequestId: widget.jobRequestId,
         ),
       ),
     );
 
     // If declined (popped with false), search for next worker
     if (result == false && mounted) {
+      if (widget.jobRequestId != null) {
+        // Reset status to searching for other workers to accept
+        await FirebaseFirestore.instance.collection('jobRequests').doc(widget.jobRequestId).update({
+          'status': 'searching',
+          'workerId': FieldValue.delete(),
+        });
+      }
       setState(() => _startSearching());
     }
     // If confirmed/scheduled, the approval screen navigates via
@@ -86,6 +150,7 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
   @override
   void dispose() {
     _progressTimer?.cancel();
+    _jobSubscription?.cancel();
     super.dispose();
   }
 
@@ -161,7 +226,15 @@ class _ConnectingWorkerScreenState extends State<ConnectingWorkerScreen> {
               SizedBox(
                 width: 230,
                 child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    if (widget.jobRequestId != null) {
+                      FirebaseFirestore.instance.collection('jobRequests').doc(widget.jobRequestId).update({
+                        'status': 'cancelled',
+                        'cancelReason': 'Customer cancelled',
+                      });
+                    }
+                    Navigator.of(context).pop();
+                  },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFE3E3E3),
                     foregroundColor: const Color(0xFF686868),

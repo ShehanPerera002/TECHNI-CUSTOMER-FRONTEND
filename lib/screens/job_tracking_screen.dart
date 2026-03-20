@@ -1,12 +1,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final String workerName;
   final String serviceTitle;
+  final String? jobRequestId;
 
-  const JobTrackingScreen({super.key, required this.workerName, required this.serviceTitle});
+  const JobTrackingScreen({
+    super.key, 
+    required this.workerName, 
+    required this.serviceTitle,
+    this.jobRequestId,
+  });
 
   @override
   State<JobTrackingScreen> createState() => _JobTrackingScreenState();
@@ -50,12 +57,19 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     ticker.start();
   }
 
-  void _finishWork() {
+  Future<void> _finishWork() async {
     setState(() {
       workDone = true;
     });
     stopwatch.stop();
     ticker.stop();
+
+    if (widget.jobRequestId != null) {
+      await FirebaseFirestore.instance.collection('jobRequests').doc(widget.jobRequestId).update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   @override
@@ -112,9 +126,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      // TODO: Handle cash payment
+                      Navigator.of(context).popUntil((route) => route.isFirst);
                     },
-                    child: Text('Pay Cash'),
+                    child: Text('Pay Cash & Close'),
                   ),
                   const SizedBox(height: 16),
                   _FeedbackForm(),

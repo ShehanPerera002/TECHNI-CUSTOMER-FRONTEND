@@ -4,8 +4,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/professional.dart';
+import '../models/job_request.dart';
 import 'connecting_worker_screen.dart';
 import 'scheduled_booking_screen.dart';
 
@@ -21,7 +24,8 @@ class FindProfessionalScreen extends StatefulWidget {
 
 class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   static const _userLocation = LatLng(6.9271, 79.8612);
-  late List<Professional> _professionals;
+  List<Professional> _professionals = [];
+  bool _isLoadingWorkers = true;
   // final String _paymentMethod = 'Cash'; // Removed unused field
   String _language = 'Sinhala';
   Timer? _movementTimer;
@@ -45,11 +49,36 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
   @override
   void initState() {
     super.initState();
-    _professionals = List.from(
-      Professional.getDummyForCategory(widget.serviceTitle),
-    );
-    _startLiveMovement();
+    _fetchWorkers();
     _initCustomerLocation();
+  }
+
+  Future<void> _fetchWorkers() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('workers')
+          .where('isAvailable', isEqualTo: true)
+          .get();
+          
+      final List<Professional> workers = [];
+      for (var doc in snapshot.docs) {
+        workers.add(Professional.fromFirestore(doc));
+      }
+      
+      if (mounted) {
+        setState(() {
+          _professionals = workers;
+          _isLoadingWorkers = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching workers: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingWorkers = false;
+        });
+      }
+    }
   }
 
   Future<void> _initCustomerLocation() async {
@@ -71,7 +100,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
     _mapController?.animateCamera(CameraUpdate.newLatLng(_customerLatLng));
   }
 
-  void _findWorker() {
+  Future<void> _findWorker() async {
     if (_professionals.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No professionals available right now.')),
@@ -79,15 +108,83 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ConnectingWorkerScreen(
-          professionals: _professionals,
-          serviceTitle: widget.serviceTitle,
-        ),
-      ),
+    // Show loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final customerId = user?.uid ?? 'dummy_customer_id';
+      
+      String customerName = 'Customer';
+      String? customerPhone;
+      
+      if (user != null) {
+        try {
+          final customerDoc = await FirebaseFirestore.instance.collection('customers').doc(customerId).get();
+          if (customerDoc.exists) {
+            customerName = customerDoc.data()?['name'] ?? 'Customer';
+            customerPhone = customerDoc.data()?['phoneNumber'];
+          }
+        } catch (e) {
+          debugPrint('Error fetching customer: $e');
+        }
+      }
+
+      final jobRef = FirebaseFirestore.instance.collection('jobRequests').doc();
+      
+      final jobReq = JobRequest(
+        id: jobRef.id,
+        customerId: customerId,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        status: 'searching',
+        jobType: widget.serviceTitle,
+        customerLocation: _customerLatLng,
+        createdAt: DateTime.now(),
+        notifiedWorkerIds: _professionals.map((p) => p.id).toList(),
+      );
+      
+      await jobRef.set(jobReq.toMap());
+      
+      final batch = FirebaseFirestore.instance.batch();
+      for (final p in _professionals) {
+        final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
+        batch.set(notifRef, {
+          'recipientId': p.id,
+          'recipientRole': 'worker',
+          'type': 'newJobRequest',
+          'jobRequestId': jobRef.id,
+          'title': 'New Job Request',
+          'message': 'A new ${widget.serviceTitle} request is available nearby.',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Remove loading overlay
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ConnectingWorkerScreen(
+            professionals: _professionals,
+            serviceTitle: widget.serviceTitle,
+            jobRequestId: jobRef.id,
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Remove loading overlay
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creating request: $e')),
+      );
+    }
   }
 
   Future<void> _scheduleWorker() async {

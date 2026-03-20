@@ -39,6 +39,7 @@ dependencies:
   speech_to_text: ^7.0.0
   flutter_svg: ^2.0.9
   url_launcher: ^6.3.1
+  flutter_dotenv: ^5.1.0
   flutter:
     sdk: flutter
 
@@ -69,6 +70,7 @@ flutter:
   assets:
     - assets/images/
     - assets/data/professional_reviews.json
+    - .env
     # - assets/icons/
 
   # To add assets to your application, add an assets section, like this:
