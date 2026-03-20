@@ -8,17 +8,20 @@ import '../models/professional.dart';
 import '../models/professional_profile_data.dart';
 import '../models/review.dart';
 import 'worker_on_the_way_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Screen shown after a worker accepts the job request.
 /// Customer reviews the worker's profile and decides to confirm or decline.
 class WorkerApprovalScreen extends StatefulWidget {
   final Professional professional;
   final String serviceTitle;
+  final String? jobRequestId;
 
   const WorkerApprovalScreen({
     super.key,
     required this.professional,
     required this.serviceTitle,
+    this.jobRequestId,
   });
 
   @override
@@ -57,18 +60,27 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
     }
   }
 
-  void _confirmWorker() {
-    // Save the real-time booking
+  Future<void> _confirmWorker() async {
+    if (widget.jobRequestId != null) {
+      await FirebaseFirestore.instance.collection('jobRequests').doc(widget.jobRequestId).update({
+        'status': 'customerConfirmed',
+        'customerConfirmedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Save the real-time booking (mock fallback if needed)
     BookingService.instance.addRealTimeBooking(
       serviceTitle: widget.serviceTitle,
       worker: widget.professional,
     );
 
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => WorkerOnTheWayScreen(
           professional: widget.professional,
           serviceTitle: widget.serviceTitle,
+          jobRequestId: widget.jobRequestId,
         ),
       ),
       (route) => route.isFirst,

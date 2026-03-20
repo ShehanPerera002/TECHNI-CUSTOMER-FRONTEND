@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TrackingService {
-  static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+  static final String _apiKey = dotenv.env['GOOGLE_API_KEY'] ?? '';
 
   /// Stream worker's live location from Firestore
   static Stream<LatLng> workerLocationStream(String workerId) {
