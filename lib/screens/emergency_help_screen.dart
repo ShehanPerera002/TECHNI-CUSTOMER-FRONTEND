@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 
 class EmergencyHelpScreen extends StatefulWidget {
   final String serviceTitle;
@@ -14,6 +15,7 @@ class EmergencyHelpScreen extends StatefulWidget {
 
 class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
   String _selectedHelp = 'Police';
+  bool _isSending = false;
 
   Future<void> _dialEmergencyNumber(String number) async {
     final String cleanNumber = number.replaceAll(RegExp(r'[^0-9]'), '');
@@ -24,6 +26,82 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Unable to open dialer for $cleanNumber.')),
       );
+    }
+  }
+
+  Future<void> _sendEmergencySms() async {
+    setState(() => _isSending = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Location permission is required to send emergency SMS.',
+                ),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permissions are permanently denied.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final String mapsLink =
+          "https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}";
+      final String message =
+          "please help me im in emergancy and need to send customers current location. My location: $mapsLink";
+
+      String number = '';
+      if (_selectedHelp == 'Police') {
+        number = '119';
+      } else if (_selectedHelp == 'Ambulance')
+        number = '1990';
+      else if (_selectedHelp == 'Fire')
+        number = '110';
+
+      final Uri smsUri = Uri(
+        scheme: 'sms',
+        path: number,
+        queryParameters: <String, String>{'body': message},
+      );
+
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch SMS app.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
@@ -123,8 +201,8 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          '1st cross street, Queens Rd, Colombo',
-                          style: TextStyle(fontSize: 14),
+                          'Your precise GPS coordinates will be fetched and sent to the selected emergency service.',
+                          style: TextStyle(fontSize: 13, color: Colors.black87),
                         ),
                       ],
                     ),
@@ -143,11 +221,7 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
             ),
             const SizedBox(height: 40),
             FilledButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$_selectedHelp request sent.')),
-                );
-              },
+              onPressed: _isSending ? null : _sendEmergencySms,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 minimumSize: const Size.fromHeight(52),
@@ -155,10 +229,22 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Confirm',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-              ),
+              child: _isSending
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Confirm',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
             const SizedBox(height: 16),
             FilledButton(

@@ -21,7 +21,7 @@ class _MainScreenState extends State<MainScreen> {
         ActivitiesScreen(key: ValueKey('activities_$_refreshKey')),
         BookingsScreen(key: ValueKey('bookings_$_refreshKey')),
         NotificationsScreen(key: ValueKey('notifications_$_refreshKey')),
-        const CustomerProfileScreen(),
+        CustomerProfileScreen(key: ValueKey('profile_$_refreshKey')),
       ];
 
   @override
@@ -36,8 +36,8 @@ class _MainScreenState extends State<MainScreen> {
         onTap: (index) {
           setState(() {
             _currentIndex = index;
-            // Refresh Activities, Bookings, Notifications when tapped
-            if (index >= 1 && index <= 3) _refreshKey++;
+            // Refresh Activities, Bookings, Notifications, Profile when tapped
+            if (index >= 1 && index <= 4) _refreshKey++;
           });
         },
         type: BottomNavigationBarType.fixed,
