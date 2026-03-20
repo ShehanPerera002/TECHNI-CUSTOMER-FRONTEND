@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TrackingService {
-  static const _apiKey = 'AIzaSyBWtdqtXcFBmfpxntxwK2sYJ6pzyUjWfW4';
+  static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
   /// Stream worker's live location from Firestore
   static Stream<LatLng> workerLocationStream(String workerId) {
