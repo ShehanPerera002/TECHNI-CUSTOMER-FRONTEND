@@ -55,7 +55,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: () {
-                    print(_messageController.text);
+                    // TODO: Implement send message functionality
+                    // print(_messageController.text);
                   },
                 ),
               ],
