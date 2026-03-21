@@ -242,32 +242,25 @@ class _VerificationScreenState extends State<VerificationScreen> {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-
               const TechniLogo(),
-
               const SizedBox(height: 40),
-
               Center(
                 child: Image.asset(AppAssets.workerIllustration, height: 200),
               ),
-
               const SizedBox(height: 40),
-
               const Center(
                 child: Text(
                   "Enter Verification Code",
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Center(
                 child: Text(
                   "A six-digit code has been sent to your phone number.",
@@ -275,9 +268,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                 ),
               ),
-
               const SizedBox(height: 35),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) {
@@ -316,9 +307,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   );
                 }),
               ),
-
               const SizedBox(height: 20),
-
               if (_errorText != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -329,7 +318,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     ),
                   ),
                 ),
-
               Center(
                 child: GestureDetector(
                   onTap: _isResending ? null : _resendCode,
@@ -353,9 +341,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   ),
                 ),
               ),
-
-              const Spacer(),
-
+              const SizedBox(height: 40),
               GestureDetector(
                 onTap: _isOtpComplete && !_isSubmitting
                     ? _continueToNext
@@ -377,7 +363,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   child: Center(
                     child: Text(
                       _isSubmitting ? 'Verifying...' : 'Continue',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -386,7 +372,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
             ],
           ),
