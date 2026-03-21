@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'feedback_screen.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final String workerName;
@@ -23,6 +24,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   bool arrived = false;
   bool workStarted = false;
   bool workDone = false;
+  String? _workerId;
   int timerSeconds = 0;
   DateTime? _jobStartedAt;
   Timer? _timer;
@@ -43,47 +45,56 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         .doc(widget.jobRequestId)
         .snapshots()
         .listen((doc) {
-      if (!doc.exists || !mounted) return;
-      final data = doc.data()!;
-      final status = data['status'];
-      
-      debugPrint('JobTrackingScreen: Status changed to $status');
+          if (!doc.exists || !mounted) return;
+          final data = doc.data()!;
+          final status = data['status'];
 
-      setState(() {
-        arrived = (status == 'arrived' || status == 'workStarted' || status == 'completed');
-        
-        if (status == 'workStarted' || status == 'completed') {
-          final startedAt = data['jobStartedAt'];
-          if (startedAt is Timestamp) {
-            _jobStartedAt = startedAt.toDate();
-            if (status == 'workStarted') {
-              workStarted = true;
-              workDone = false;
-              _resumeTimer();
-            } else if (status == 'completed') {
-              workStarted = true;
-              workDone = true;
-              _stopTimer();
-              // Calculate final seconds from completion time if available
-              final completedAt = data['completedAt'];
-              if (completedAt is Timestamp) {
-                timerSeconds = math.max(0, completedAt.toDate().difference(_jobStartedAt!).inSeconds);
+          debugPrint('JobTrackingScreen: Status changed to $status');
+
+          setState(() {
+            arrived =
+                (status == 'arrived' ||
+                status == 'workStarted' ||
+                status == 'completed');
+            _workerId = data['workerId'];
+
+            if (status == 'workStarted' || status == 'completed') {
+              final startedAt = data['jobStartedAt'];
+              if (startedAt is Timestamp) {
+                _jobStartedAt = startedAt.toDate();
+                if (status == 'workStarted') {
+                  workStarted = true;
+                  workDone = false;
+                  _resumeTimer();
+                } else if (status == 'completed') {
+                  workStarted = true;
+                  workDone = true;
+                  _stopTimer();
+                  // Calculate final seconds from completion time if available
+                  final completedAt = data['completedAt'];
+                  if (completedAt is Timestamp) {
+                    timerSeconds = math.max(
+                      0,
+                      completedAt.toDate().difference(_jobStartedAt!).inSeconds,
+                    );
+                  }
+                }
               }
             }
-          }
-        }
-      });
-    });
+          });
+        });
   }
-
 
   void _resumeTimer() {
     if (_timer != null) return; // Already running
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_jobStartedAt != null && mounted) {
         setState(() {
-          timerSeconds = math.max(0, DateTime.now().difference(_jobStartedAt!).inSeconds);
+          timerSeconds = math.max(
+            0,
+            DateTime.now().difference(_jobStartedAt!).inSeconds,
+          );
         });
       }
     });
@@ -101,9 +112,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         .collection('jobRequests')
         .doc(widget.jobRequestId)
         .update({
-      'status': 'workStarted',
-      'jobStartedAt': FieldValue.serverTimestamp(),
-    });
+          'status': 'workStarted',
+          'jobStartedAt': FieldValue.serverTimestamp(),
+        });
   }
 
   Future<void> _finishWork() async {
@@ -112,10 +123,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     final docRef = FirebaseFirestore.instance
         .collection('jobRequests')
         .doc(widget.jobRequestId);
-    
+
     final snapshot = await docRef.get();
     if (!snapshot.exists) return;
-    
+
     final data = snapshot.data() ?? {};
     final now = FieldValue.serverTimestamp();
     final fare = _estimatePrice(timerSeconds).toDouble();
@@ -130,24 +141,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     });
 
     // 2. Create a record in the dedicated "completed jobs" collection for the worker's history
-    await FirebaseFirestore.instance.collection('completed jobs').doc(widget.jobRequestId).set({
-      ...data,
-      'status': 'completed',
-      'completedAt': now,
-      'fare': fare,
-      'durationSeconds': duration,
-    }, SetOptions(merge: true));
+    await FirebaseFirestore.instance
+        .collection('completed jobs')
+        .doc(widget.jobRequestId)
+        .set({
+          ...data,
+          'status': 'completed',
+          'completedAt': now,
+          'fare': fare,
+          'durationSeconds': duration,
+        }, SetOptions(merge: true));
 
-    // 3. Reset worker availability
-    final workerId = data['workerId'];
-    if (workerId != null) {
-      await FirebaseFirestore.instance.collection('workers').doc(workerId).update({
-        'isAvailable': true,
-        'activeJobId': null,
-      });
-    }
-
-    debugPrint('JobTrackingScreen: Job finalized and worker set to available');
+    debugPrint(
+      'JobTrackingScreen: Job finalized and moved to completed jobs collection',
+    );
   }
 
   @override
@@ -245,7 +252,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
             color: isActive ? Colors.blue : Colors.grey.shade200,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: isActive ? Colors.white : Colors.grey.shade400, size: 20),
+          child: Icon(
+            icon,
+            color: isActive ? Colors.white : Colors.grey.shade400,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -280,12 +291,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         children: [
           const Text(
             'WORK IN PROGRESS',
-            style: TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.bold, color: Colors.blue),
+            style: TextStyle(
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             _formatTime(timerSeconds),
-            style: const TextStyle(fontSize: 54, fontWeight: FontWeight.w300, fontFamily: 'monospace'),
+            style: const TextStyle(
+              fontSize: 54,
+              fontWeight: FontWeight.w300,
+              fontFamily: 'monospace',
+            ),
           ),
           const SizedBox(height: 32),
           Padding(
@@ -307,7 +326,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
       ),
-      child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -326,7 +348,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
           const SizedBox(height: 16),
           const Text(
             'Service Completed!',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
           ),
           const SizedBox(height: 24),
           _summaryRow('Duration', _formatTime(timerSeconds)),
@@ -334,14 +360,34 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
           _summaryRow('Total Price', 'Rs. $finalPrice'),
           const SizedBox(height: 32),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+            onPressed: () {
+              if (widget.jobRequestId != null && _workerId != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FeedbackScreen(
+                      jobId: widget.jobRequestId!,
+                      workerId: _workerId!,
+                      workerName: widget.workerName,
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Pay & Close', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Pay & Close',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -354,8 +400,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 16, color: Colors.black54)),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, color: Colors.black54),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
