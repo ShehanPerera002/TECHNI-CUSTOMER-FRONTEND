@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -6,7 +5,11 @@ class JobTrackingScreen extends StatefulWidget {
   final String workerName;
   final String serviceTitle;
 
-  const JobTrackingScreen({super.key, required this.workerName, required this.serviceTitle});
+  const JobTrackingScreen({
+    super.key,
+    required this.workerName,
+    required this.serviceTitle,
+  });
 
   @override
   State<JobTrackingScreen> createState() => _JobTrackingScreenState();
@@ -67,16 +70,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Job Tracking'),
-      ),
+      appBar: AppBar(title: Text('Job Tracking')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Worker: ${widget.workerName}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            Text('Service: ${widget.serviceTitle}', style: TextStyle(fontSize: 16)),
+            Text(
+              'Worker: ${widget.workerName}',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              'Service: ${widget.serviceTitle}',
+              style: TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 24),
             if (!arrived)
               ElevatedButton(
@@ -84,16 +91,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
                 child: Text('Worker Arrived'),
               ),
             if (arrived && !workStarted)
-              ElevatedButton(
-                onPressed: _startWork,
-                child: Text('Start Work'),
-              ),
+              ElevatedButton(onPressed: _startWork, child: Text('Start Work')),
             if (workStarted && !workDone)
               Column(
                 children: [
                   Text('Work in progress...', style: TextStyle(fontSize: 16)),
                   const SizedBox(height: 12),
-                  Text('Timer: ${_formatTime(timerSeconds)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Timer: ${_formatTime(timerSeconds)}',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _finishWork,
@@ -104,11 +111,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
             if (workDone)
               Column(
                 children: [
-                  Text('Work Completed!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Work Completed!',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 12),
-                  Text('Total Time: ${_formatTime(timerSeconds)}', style: TextStyle(fontSize: 20)),
+                  Text(
+                    'Total Time: ${_formatTime(timerSeconds)}',
+                    style: TextStyle(fontSize: 20),
+                  ),
                   const SizedBox(height: 12),
-                  Text('Estimated Price: Rs. ${_estimatePrice(timerSeconds)}', style: TextStyle(fontSize: 20, color: Colors.green)),
+                  Text(
+                    'Estimated Price: Rs. ${_estimatePrice(timerSeconds)}',
+                    style: TextStyle(fontSize: 20, color: Colors.green),
+                  ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
@@ -152,30 +168,35 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Leave Feedback', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        Text(
+          'Leave Feedback',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(5, (i) => IconButton(
-            icon: Icon(
-              i < _rating ? Icons.star : Icons.star_border,
-              color: Colors.amber,
+          children: List.generate(
+            5,
+            (i) => IconButton(
+              icon: Icon(
+                i < _rating ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+              ),
+              onPressed: () => setState(() => _rating = i + 1),
             ),
-            onPressed: () => setState(() => _rating = i + 1),
-          )),
+          ),
         ),
         TextField(
           controller: _controller,
-          decoration: InputDecoration(
-            hintText: 'Write your feedback...'
-          ),
+          decoration: InputDecoration(hintText: 'Write your feedback...'),
           minLines: 2,
           maxLines: 4,
         ),
         const SizedBox(height: 8),
         ElevatedButton(
           onPressed: () {
-            // TODO: Save feedback
+            // Navigate to rating screen after feedback
+            Navigator.pushNamed(context, '/rating');
           },
           child: Text('Submit Feedback'),
         ),
@@ -183,7 +204,6 @@ class _FeedbackFormState extends State<_FeedbackForm> {
     );
   }
 }
-
 
 // Add this dependency to pubspec.yaml:
 // flutter:

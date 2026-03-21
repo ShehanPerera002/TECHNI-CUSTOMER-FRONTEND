@@ -204,6 +204,12 @@ class _RatingScreenState extends State<RatingScreen> {
                   print("Rating: $rating");
                   print("Comment: ${commentController.text}");
                   print("Images: ${images.length}");
+                  // Navigate back to home after review submission
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/home',
+                    (route) => false,
+                  );
                 },
 
                 style: ElevatedButton.styleFrom(
