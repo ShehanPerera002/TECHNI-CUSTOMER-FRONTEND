@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobTrackingScreen extends StatefulWidget {
@@ -24,19 +24,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   bool workDone = false;
   int timerSeconds = 0;
   DateTime? _jobStartedAt;
-  late final Ticker ticker;
+  Timer? _timer;
+  StreamSubscription? _jobSub;
 
   @override
   void initState() {
     super.initState();
-    ticker = Ticker(_onTick);
     _listenToJobRequest();
   }
 
   void _listenToJobRequest() {
     if (widget.jobRequestId == null) return;
 
-    FirebaseFirestore.instance
+    _jobSub?.cancel();
+    _jobSub = FirebaseFirestore.instance
         .collection('jobRequests')
         .doc(widget.jobRequestId)
         .snapshots()
@@ -45,42 +46,51 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
       final data = doc.data()!;
       final status = data['status'];
       
+      debugPrint('JobTrackingScreen: Status changed to $status');
+
       setState(() {
         arrived = (status == 'arrived' || status == 'workStarted' || status == 'completed');
-        if (status == 'workStarted' && !workStarted) {
-          workStarted = true;
+        
+        if (status == 'workStarted' || status == 'completed') {
           final startedAt = data['jobStartedAt'];
           if (startedAt is Timestamp) {
             _jobStartedAt = startedAt.toDate();
-            _resumeTimer();
+            if (status == 'workStarted') {
+              workStarted = true;
+              workDone = false;
+              _resumeTimer();
+            } else if (status == 'completed') {
+              workStarted = true;
+              workDone = true;
+              _stopTimer();
+              // Calculate final seconds from completion time if available
+              final completedAt = data['completedAt'];
+              if (completedAt is Timestamp) {
+                timerSeconds = completedAt.toDate().difference(_jobStartedAt!).inSeconds;
+              }
+            }
           }
-        }
-        if (status == 'completed' && !workDone) {
-          workDone = true;
-          _stopTimer();
         }
       });
     });
   }
 
-  void _onTick(Duration duration) {
-    if (_jobStartedAt != null && mounted) {
-      setState(() {
-        timerSeconds = DateTime.now().difference(_jobStartedAt!).inSeconds;
-      });
-    }
-  }
 
   void _resumeTimer() {
-    if (!ticker.isActive) {
-      ticker.start();
-    }
+    if (_timer != null) return; // Already running
+    
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_jobStartedAt != null && mounted) {
+        setState(() {
+          timerSeconds = DateTime.now().difference(_jobStartedAt!).inSeconds;
+        });
+      }
+    });
   }
 
   void _stopTimer() {
-    if (ticker.isActive) {
-      ticker.stop();
-    }
+    _timer?.cancel();
+    _timer = null;
   }
 
   Future<void> _startWork() async {
@@ -132,7 +142,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
 
   @override
   void dispose() {
-    ticker.dispose();
+    _timer?.cancel();
+    _jobSub?.cancel();
     super.dispose();
   }
 
