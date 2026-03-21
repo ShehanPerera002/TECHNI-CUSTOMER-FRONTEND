@@ -23,55 +23,90 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   bool workStarted = false;
   bool workDone = false;
   int timerSeconds = 0;
-  late final Stopwatch stopwatch;
+  DateTime? _jobStartedAt;
   late final Ticker ticker;
 
   @override
   void initState() {
     super.initState();
-    stopwatch = Stopwatch();
     ticker = Ticker(_onTick);
+    _listenToJobRequest();
+  }
+
+  void _listenToJobRequest() {
+    if (widget.jobRequestId == null) return;
+
+    FirebaseFirestore.instance
+        .collection('jobRequests')
+        .doc(widget.jobRequestId)
+        .snapshots()
+        .listen((doc) {
+      if (!doc.exists || !mounted) return;
+      final data = doc.data()!;
+      final status = data['status'];
+      
+      setState(() {
+        arrived = (status == 'arrived' || status == 'workStarted' || status == 'completed');
+        if (status == 'workStarted' && !workStarted) {
+          workStarted = true;
+          final startedAt = data['jobStartedAt'];
+          if (startedAt is Timestamp) {
+            _jobStartedAt = startedAt.toDate();
+            _resumeTimer();
+          }
+        }
+        if (status == 'completed' && !workDone) {
+          workDone = true;
+          _stopTimer();
+        }
+      });
+    });
   }
 
   void _onTick(Duration duration) {
-    if (stopwatch.isRunning) {
+    if (_jobStartedAt != null && mounted) {
       setState(() {
-        timerSeconds = duration.inSeconds;
+        timerSeconds = DateTime.now().difference(_jobStartedAt!).inSeconds;
       });
     }
   }
 
-  void _simulateArrival() {
-    setState(() {
-      arrived = true;
-    });
-    // TODO: Notify customer (simulate notification)
+  void _resumeTimer() {
+    if (!ticker.isActive) {
+      ticker.start();
+    }
   }
 
-  void _startWork() {
-    setState(() {
-      workStarted = true;
+  void _stopTimer() {
+    if (ticker.isActive) {
+      ticker.stop();
+    }
+  }
+
+  Future<void> _startWork() async {
+    if (widget.jobRequestId == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('jobRequests')
+        .doc(widget.jobRequestId)
+        .update({
+      'status': 'workStarted',
+      'jobStartedAt': FieldValue.serverTimestamp(),
     });
-    stopwatch.start();
-    ticker.start();
   }
 
   Future<void> _finishWork() async {
-    setState(() {
-      workDone = true;
-    });
-    stopwatch.stop();
-    ticker.stop();
+    if (widget.jobRequestId == null) return;
 
-    if (widget.jobRequestId != null) {
-      await FirebaseFirestore.instance
-          .collection('jobRequests')
-          .doc(widget.jobRequestId)
-          .update({
-            'status': 'completed',
-            'completedAt': FieldValue.serverTimestamp(),
-          });
-    }
+    await FirebaseFirestore.instance
+        .collection('jobRequests')
+        .doc(widget.jobRequestId)
+        .update({
+      'status': 'completed',
+      'completedAt': FieldValue.serverTimestamp(),
+      'fare': _estimatePrice(timerSeconds).toDouble(),
+      'durationSeconds': timerSeconds,
+    });
   }
 
   @override
@@ -83,82 +118,212 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Job Tracking')),
-      body: Padding(
+      backgroundColor: const Color(0xFFF7F9FC),
+      appBar: AppBar(
+        title: const Text('Job Progress'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Worker: ${widget.workerName}',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            Text(
-              'Service: ${widget.serviceTitle}',
-              style: TextStyle(fontSize: 16),
-            ),
+            _workerInfoCard(),
             const SizedBox(height: 24),
-            if (!arrived)
-              ElevatedButton(
-                onPressed: _simulateArrival,
-                child: Text('Worker Arrived'),
-              ),
+            _statusSection(),
+            const SizedBox(height: 32),
             if (arrived && !workStarted)
-              ElevatedButton(onPressed: _startWork, child: Text('Start Work')),
-            if (workStarted && !workDone)
-              Column(
-                children: [
-                  Text('Work in progress...', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Timer: ${_formatTime(timerSeconds)}',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _finishWork,
-                    child: Text('Finish Work'),
-                  ),
-                ],
-              ),
-            if (workDone)
-              Column(
-                children: [
-                  Text(
-                    'Work Completed!',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Total Time: ${_formatTime(timerSeconds)}',
-                    style: TextStyle(fontSize: 20),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Estimated Price: Rs. ${_estimatePrice(timerSeconds)}',
-                    style: TextStyle(fontSize: 20, color: Colors.green),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                    child: Text('Pay Cash & Close'),
-                  ),
-                  const SizedBox(height: 16),
-                  _FeedbackForm(),
-                ],
-              ),
+              _actionButton('Start Work', _startWork, Colors.green)
+            else if (workStarted && !workDone)
+              _timerSection()
+            else if (workDone)
+              _summarySection(),
           ],
         ),
       ),
     );
   }
 
+  Widget _workerInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.blue.shade100,
+            child: const Icon(Icons.person, size: 40, color: Colors.blue),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.workerName,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            widget.serviceTitle,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusSection() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _statusIcon(Icons.location_on, 'Arrived', arrived),
+        _statusConnector(arrived),
+        _statusIcon(Icons.timer, 'Working', workStarted),
+        _statusConnector(workStarted),
+        _statusIcon(Icons.check_circle, 'Done', workDone),
+      ],
+    );
+  }
+
+  Widget _statusIcon(IconData icon, String label, bool isActive) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.blue : Colors.grey.shade200,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: isActive ? Colors.white : Colors.grey.shade400, size: 20),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            color: isActive ? Colors.blue : Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statusConnector(bool isActive) {
+    return Container(
+      width: 40,
+      height: 2,
+      color: isActive ? Colors.blue : Colors.grey.shade200,
+    );
+  }
+
+  Widget _timerSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'WORK IN PROGRESS',
+            style: TextStyle(letterSpacing: 1.2, fontWeight: FontWeight.bold, color: Colors.blue),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _formatTime(timerSeconds),
+            style: const TextStyle(fontSize: 54, fontWeight: FontWeight.w300, fontFamily: 'monospace'),
+          ),
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _actionButton('Finish Work', _finishWork, Colors.blue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButton(String label, VoidCallback onPressed, Color color) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _summarySection() {
+    final finalPrice = _estimatePrice(timerSeconds);
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.shade100),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.stars, color: Colors.green, size: 48),
+          const SizedBox(height: 16),
+          const Text(
+            'Service Completed!',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
+          ),
+          const SizedBox(height: 24),
+          _summaryRow('Duration', _formatTime(timerSeconds)),
+          const Divider(),
+          _summaryRow('Total Price', 'Rs. $finalPrice'),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Pay & Close', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16, color: Colors.black54)),
+          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
   String _formatTime(int seconds) {
-    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final h = (seconds ~/ 3600).toString().padLeft(2, '0');
+    final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
     final s = (seconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
+    return seconds >= 3600 ? '$h:$m:$s' : '$m:$s';
   }
 
   int _estimatePrice(int seconds) {
