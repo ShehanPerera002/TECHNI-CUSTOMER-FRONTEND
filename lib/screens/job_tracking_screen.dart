@@ -138,7 +138,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
       'durationSeconds': duration,
     }, SetOptions(merge: true));
 
-    debugPrint('JobTrackingScreen: Job finalized and moved to completed jobs collection');
+    // 3. Reset worker availability
+    final workerId = data['workerId'];
+    if (workerId != null) {
+      await FirebaseFirestore.instance.collection('workers').doc(workerId).update({
+        'isAvailable': true,
+        'activeJobId': null,
+      });
+    }
+
+    debugPrint('JobTrackingScreen: Job finalized and worker set to available');
   }
 
   @override
