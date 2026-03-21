@@ -1,4 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Represents an available service professional.
 class Professional {
@@ -9,6 +10,9 @@ class Professional {
   final LatLng location;
   final String avatarUrl;
   final String phoneNumber;
+  final String? fcmToken;
+  final bool isAvailable;
+  final String? activeJobId;
 
   const Professional({
     required this.id,
@@ -18,7 +22,32 @@ class Professional {
     required this.location,
     required this.avatarUrl,
     required this.phoneNumber,
+    this.fcmToken,
+    this.isAvailable = true,
+    this.activeJobId,
   });
+
+  factory Professional.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    
+    LatLng parseGeoPoint(dynamic field) {
+      if (field is GeoPoint) return LatLng(field.latitude, field.longitude);
+      return const LatLng(0, 0);
+    }
+
+    return Professional(
+      id: doc.id,
+      name: data['name'] ?? '',
+      rating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
+      timeToBook: 'Calculating...', // This will be calculated on the fly later
+      location: parseGeoPoint(data['lastLocation'] ?? data['location']),
+      avatarUrl: data['profileUrl'] ?? '',
+      phoneNumber: data['phoneNumber'] ?? '',
+      fcmToken: data['fcmToken'],
+      isAvailable: data['isAvailable'] ?? false,
+      activeJobId: data['activeJobId'],
+    );
+  }
 
   Professional copyWith({LatLng? location, String? timeToBook}) {
     return Professional(
@@ -29,6 +58,9 @@ class Professional {
       location: location ?? this.location,
       avatarUrl: avatarUrl,
       phoneNumber: phoneNumber,
+      fcmToken: fcmToken,
+      isAvailable: isAvailable,
+      activeJobId: activeJobId,
     );
   }
 

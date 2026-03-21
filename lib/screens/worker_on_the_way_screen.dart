@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/booking_service.dart';
 import '../core/tracking_service.dart';
@@ -9,15 +10,18 @@ import '../models/professional.dart';
 import 'emergency_help_screen.dart';
 import 'in_app_call_screen.dart';
 import 'in_app_chat_screen.dart';
+import 'job_tracking_screen.dart';
 
 class WorkerOnTheWayScreen extends StatefulWidget {
   final Professional professional;
   final String serviceTitle;
+  final String? jobRequestId;
 
   const WorkerOnTheWayScreen({
     super.key,
     required this.professional,
     required this.serviceTitle,
+    this.jobRequestId,
   });
 
   @override
@@ -32,8 +36,11 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
   List<LatLng> _routePoints = [];
   String _eta = '--';
   String _distance = '--';
+  LatLng? _lastRouteUpdatePosition;
+  DateTime? _lastRouteUpdateTime;
 
-  StreamSubscription<LatLng>? _workerLocationSub;
+  StreamSubscription<DocumentSnapshot>? _workerLocationSub;
+  StreamSubscription<DocumentSnapshot>? _jobStatusSub;
   StreamSubscription<Position>? _customerLocationSub;
 
   @override
@@ -79,40 +86,105 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
 
   /// Listen to worker's live location from Firestore
   void _listenToWorkerLocation() {
-    _workerLocationSub =
-        TrackingService.workerLocationStream(widget.professional.id).listen((
-          latLng,
-        ) {
-          setState(() => _workerLatLng = latLng);
+    if (widget.jobRequestId == null) {
+      // Fallback mock
+      _workerLocationSub = null; // Can't easily assign the old stream type here, just skip
+      return;
+    }
 
-          // Smoothly move camera to keep worker in view
-          _mapController?.animateCamera(CameraUpdate.newLatLng(_workerLatLng));
+    _workerLocationSub = FirebaseFirestore.instance
+        .collection('liveLocations')
+        .doc(widget.jobRequestId)
+        .snapshots()
+        .listen((doc) {
+      if (!doc.exists) return;
+      final lat = doc.data()?['latitude'];
+      final lng = doc.data()?['longitude'];
+      if (lat != null && lng != null && mounted) {
+        setState(() => _workerLatLng = LatLng(lat, lng));
+        _mapController?.animateCamera(CameraUpdate.newLatLng(_workerLatLng));
+        _updateRouteAndETA();
+      }
+    });
 
-          _updateRouteAndETA();
-        });
+    _jobStatusSub = FirebaseFirestore.instance
+        .collection('jobRequests')
+        .doc(widget.jobRequestId)
+        .snapshots()
+        .listen((doc) {
+      if (!doc.exists) return;
+      final status = doc.data()?['status'];
+      if (status == 'arrived' && mounted) {
+        _jobStatusSub?.cancel();
+        
+        // Show notification to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The worker has arrived!'),
+            backgroundColor: Color(0xFF2563EB),
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Navigate to Job Tracking Screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => JobTrackingScreen(
+              workerName: widget.professional.name,
+              serviceTitle: widget.serviceTitle,
+              jobRequestId: widget.jobRequestId,
+            ),
+          ),
+        );
+      }
+    });
   }
 
   /// Fetch route polyline + ETA whenever locations update
   Future<void> _updateRouteAndETA() async {
     if (_customerLatLng == null) return;
 
-    final results = await Future.wait([
-      TrackingService.getRoutePoints(_workerLatLng, _customerLatLng!),
-      TrackingService.getETA(_workerLatLng, _customerLatLng!),
-    ]);
+    // Optimization: Only update route if the worker has moved significantly (>50m) 
+    // or if it has been more than 20 seconds since last update.
+    final now = DateTime.now();
+    if (_lastRouteUpdatePosition != null && _lastRouteUpdateTime != null) {
+      final distanceMoved = Geolocator.distanceBetween(
+        _lastRouteUpdatePosition!.latitude,
+        _lastRouteUpdatePosition!.longitude,
+        _workerLatLng.latitude,
+        _workerLatLng.longitude,
+      );
+      final timeDiff = now.difference(_lastRouteUpdateTime!);
 
-    if (!mounted) return;
-    setState(() {
-      _routePoints = results[0] as List<LatLng>;
-      final etaData = results[1] as Map<String, String>;
-      _eta = etaData['eta'] ?? '--';
-      _distance = etaData['distance'] ?? '--';
-    });
+      if (distanceMoved < 50 && timeDiff < const Duration(seconds: 20)) {
+        return; // Skip update
+      }
+    }
+
+    try {
+      final results = await Future.wait([
+        TrackingService.getRoutePoints(_workerLatLng, _customerLatLng!),
+        TrackingService.getETA(_workerLatLng, _customerLatLng!),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _lastRouteUpdatePosition = _workerLatLng;
+        _lastRouteUpdateTime = now;
+        _routePoints = results[0] as List<LatLng>;
+        final etaData = results[1] as Map<String, String>;
+        _eta = etaData['eta'] ?? '--';
+        _distance = etaData['distance'] ?? '--';
+      });
+    } catch (e) {
+      debugPrint('Error updating route/ETA: $e');
+    }
   }
 
   @override
   void dispose() {
     _workerLocationSub?.cancel();
+    _jobStatusSub?.cancel();
     _customerLocationSub?.cancel();
     _mapController?.dispose();
     super.dispose();
@@ -277,29 +349,6 @@ class _TripSheet extends StatefulWidget {
 }
 
 class _TripSheetState extends State<_TripSheet> {
-
-  void _confirmWork() {
-    BookingService.instance.completeBooking(
-      BookingService.instance.bookings
-          .firstWhere(
-            (b) =>
-                b.serviceTitle == widget.serviceTitle &&
-                b.workerName == widget.professional.name,
-            orElse: () => BookingService.instance.bookings.first,
-          )
-          .id,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.professional.name} has completed the work!'),
-        backgroundColor: const Color(0xFF22C55E),
-      ),
-    );
-
-    Navigator.of(context).popUntil((route) => route.isFirst);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -445,22 +494,22 @@ class _TripSheetState extends State<_TripSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Confirm button
+                // Worker hasn't arrived yet button
                 SizedBox(
                   height: 48,
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: _confirmWork,
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    onPressed: () {},
+                    icon: const Icon(Icons.sync, size: 18),
                     label: const Text(
-                      'Confirm',
+                      'Waiting for Worker to Arrive',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: Colors.grey.shade400,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
