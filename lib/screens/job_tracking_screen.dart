@@ -98,15 +98,36 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   Future<void> _finishWork() async {
     if (widget.jobRequestId == null) return;
 
-    await FirebaseFirestore.instance
+    final docRef = FirebaseFirestore.instance
         .collection('jobRequests')
-        .doc(widget.jobRequestId)
-        .update({
+        .doc(widget.jobRequestId);
+    
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) return;
+    
+    final data = snapshot.data() ?? {};
+    final now = FieldValue.serverTimestamp();
+    final fare = _estimatePrice(timerSeconds).toDouble();
+    final duration = timerSeconds;
+
+    // 1. Update the original request in jobRequests
+    await docRef.update({
       'status': 'completed',
-      'completedAt': FieldValue.serverTimestamp(),
-      'fare': _estimatePrice(timerSeconds).toDouble(),
-      'durationSeconds': timerSeconds,
+      'completedAt': now,
+      'fare': fare,
+      'durationSeconds': duration,
     });
+
+    // 2. Create a record in the dedicated "completed jobs" collection for the worker's history
+    await FirebaseFirestore.instance.collection('completed jobs').doc(widget.jobRequestId).set({
+      ...data,
+      'status': 'completed',
+      'completedAt': now,
+      'fare': fare,
+      'durationSeconds': duration,
+    }, SetOptions(merge: true));
+
+    debugPrint('JobTrackingScreen: Job finalized and moved to completed jobs collection');
   }
 
   @override

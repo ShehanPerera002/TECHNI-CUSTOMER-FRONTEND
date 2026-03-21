@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../core/booking_service.dart';
 import '../core/tracking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
