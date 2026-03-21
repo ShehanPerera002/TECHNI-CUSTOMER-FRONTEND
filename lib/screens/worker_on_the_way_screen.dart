@@ -36,6 +36,8 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
   List<LatLng> _routePoints = [];
   String _eta = '--';
   String _distance = '--';
+  LatLng? _lastRouteUpdatePosition;
+  DateTime? _lastRouteUpdateTime;
 
   StreamSubscription<DocumentSnapshot>? _workerLocationSub;
   StreamSubscription<DocumentSnapshot>? _jobStatusSub;
@@ -113,8 +115,18 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
       if (!doc.exists) return;
       final status = doc.data()?['status'];
       if (status == 'arrived' && mounted) {
-        // Navigate to Job Tracking Screen
         _jobStatusSub?.cancel();
+        
+        // Show notification to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The worker has arrived!'),
+            backgroundColor: Color(0xFF2563EB),
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Navigate to Job Tracking Screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => JobTrackingScreen(
@@ -132,18 +144,41 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
   Future<void> _updateRouteAndETA() async {
     if (_customerLatLng == null) return;
 
-    final results = await Future.wait([
-      TrackingService.getRoutePoints(_workerLatLng, _customerLatLng!),
-      TrackingService.getETA(_workerLatLng, _customerLatLng!),
-    ]);
+    // Optimization: Only update route if the worker has moved significantly (>50m) 
+    // or if it has been more than 20 seconds since last update.
+    final now = DateTime.now();
+    if (_lastRouteUpdatePosition != null && _lastRouteUpdateTime != null) {
+      final distanceMoved = Geolocator.distanceBetween(
+        _lastRouteUpdatePosition!.latitude,
+        _lastRouteUpdatePosition!.longitude,
+        _workerLatLng.latitude,
+        _workerLatLng.longitude,
+      );
+      final timeDiff = now.difference(_lastRouteUpdateTime!);
 
-    if (!mounted) return;
-    setState(() {
-      _routePoints = results[0] as List<LatLng>;
-      final etaData = results[1] as Map<String, String>;
-      _eta = etaData['eta'] ?? '--';
-      _distance = etaData['distance'] ?? '--';
-    });
+      if (distanceMoved < 50 && timeDiff < const Duration(seconds: 20)) {
+        return; // Skip update
+      }
+    }
+
+    try {
+      final results = await Future.wait([
+        TrackingService.getRoutePoints(_workerLatLng, _customerLatLng!),
+        TrackingService.getETA(_workerLatLng, _customerLatLng!),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _lastRouteUpdatePosition = _workerLatLng;
+        _lastRouteUpdateTime = now;
+        _routePoints = results[0] as List<LatLng>;
+        final etaData = results[1] as Map<String, String>;
+        _eta = etaData['eta'] ?? '--';
+        _distance = etaData['distance'] ?? '--';
+      });
+    } catch (e) {
+      debugPrint('Error updating route/ETA: $e');
+    }
   }
 
   @override
