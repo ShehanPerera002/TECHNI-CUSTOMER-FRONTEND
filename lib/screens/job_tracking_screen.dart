@@ -8,8 +8,8 @@ class JobTrackingScreen extends StatefulWidget {
   final String? jobRequestId;
 
   const JobTrackingScreen({
-    super.key, 
-    required this.workerName, 
+    super.key,
+    required this.workerName,
     required this.serviceTitle,
     this.jobRequestId,
   });
@@ -64,10 +64,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     ticker.stop();
 
     if (widget.jobRequestId != null) {
-      await FirebaseFirestore.instance.collection('jobRequests').doc(widget.jobRequestId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-      });
+      await FirebaseFirestore.instance
+          .collection('jobRequests')
+          .doc(widget.jobRequestId)
+          .update({
+            'status': 'completed',
+            'completedAt': FieldValue.serverTimestamp(),
+          });
     }
   }
 
