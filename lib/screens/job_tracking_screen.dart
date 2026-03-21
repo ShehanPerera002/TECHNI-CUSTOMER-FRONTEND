@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -66,7 +67,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
               // Calculate final seconds from completion time if available
               final completedAt = data['completedAt'];
               if (completedAt is Timestamp) {
-                timerSeconds = completedAt.toDate().difference(_jobStartedAt!).inSeconds;
+                timerSeconds = math.max(0, completedAt.toDate().difference(_jobStartedAt!).inSeconds);
               }
             }
           }
@@ -82,7 +83,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_jobStartedAt != null && mounted) {
         setState(() {
-          timerSeconds = DateTime.now().difference(_jobStartedAt!).inSeconds;
+          timerSeconds = math.max(0, DateTime.now().difference(_jobStartedAt!).inSeconds);
         });
       }
     });
