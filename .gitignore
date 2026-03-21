@@ -46,4 +46,5 @@ app.*.map.json
 overview.md
 
 # Environment variables
-.env
+.env
+>>>>>>> origin/main
