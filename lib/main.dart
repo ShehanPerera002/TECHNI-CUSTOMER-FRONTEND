@@ -11,6 +11,11 @@ import 'screens/success_screen.dart';
 import 'screens/create_profile_screen.dart';
 import 'screens/email_login_screen.dart';
 import 'screens/main_screen.dart';
+import 'ai_assistant/ai_welcome_screen.dart';
+import 'ai_assistant/ai_analysis_screen.dart';
+import 'ai_assistant/ai_checklist_screen.dart';
+import 'ai_assistant/technician_match.dart';
+import 'ai_assistant/ai_chat_screen.dart';
 import 'screens/rating_screen.dart';
 
 Future<void> main() async {
@@ -66,6 +71,11 @@ class TechniApp extends StatelessWidget {
         '/success': (context) => const SuccessScreen(),
         '/createProfile': (context) => const CreateProfileScreen(),
         '/home': (context) => const MainScreen(),
+        '/ai': (context) => const AIWelcomeScreen(),
+        '/chat': (context) => const AIChatScreen(),
+        '/analysis': (context) => const AiAnalysisScreen(),
+        '/checklist': (context) => const AiChecklistScreen(),
+        '/technician': (context) => const TechnicianMatchScreen(),
         '/rating': (context) => const RatingScreen(),
       },
     );
