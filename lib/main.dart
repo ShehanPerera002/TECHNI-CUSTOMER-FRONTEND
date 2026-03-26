@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/verification_screen.dart';
@@ -15,10 +16,14 @@ import 'ai_assistant/ai_analysis_screen.dart';
 import 'ai_assistant/ai_checklist_screen.dart';
 import 'ai_assistant/technician_match.dart';
 import 'ai_assistant/ai_chat_screen.dart';
+import 'screens/rating_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+
+  // Load environment variables
+  await dotenv.load();
 
   try {
     await Firebase.initializeApp();
@@ -71,6 +76,7 @@ class TechniApp extends StatelessWidget {
         '/analysis': (context) => const AiAnalysisScreen(),
         '/checklist': (context) => const AiChecklistScreen(),
         '/technician': (context) => const TechnicianMatchScreen(),
+        '/rating': (context) => const RatingScreen(),
       },
     );
   }

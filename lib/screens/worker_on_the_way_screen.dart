@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../core/booking_service.dart';
 import '../core/tracking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
@@ -32,12 +31,15 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
   GoogleMapController? _mapController;
 
   LatLng? _customerLatLng;
-  LatLng _workerLatLng = const LatLng(6.9271, 79.8612);
+  LatLng? _workerLatLng;
   List<LatLng> _routePoints = [];
   String _eta = '--';
   String _distance = '--';
+  LatLng? _lastRouteUpdatePosition;
+  DateTime? _lastRouteUpdateTime;
 
   StreamSubscription<DocumentSnapshot>? _workerLocationSub;
+  StreamSubscription<DocumentSnapshot>? _workerFallbackSub;
   StreamSubscription<DocumentSnapshot>? _jobStatusSub;
   StreamSubscription<Position>? _customerLocationSub;
 
@@ -46,6 +48,7 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
     super.initState();
     _initCustomerLocation();
     _listenToWorkerLocation();
+    _listenToJobStatus();
   }
 
   /// Get customer's real GPS location
@@ -82,13 +85,10 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
         });
   }
 
+
   /// Listen to worker's live location from Firestore
   void _listenToWorkerLocation() {
-    if (widget.jobRequestId == null) {
-      // Fallback mock
-      _workerLocationSub = null; // Can't easily assign the old stream type here, just skip
-      return;
-    }
+    if (widget.jobRequestId == null) return;
 
     _workerLocationSub = FirebaseFirestore.instance
         .collection('liveLocations')
@@ -99,12 +99,41 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
       final lat = doc.data()?['latitude'];
       final lng = doc.data()?['longitude'];
       if (lat != null && lng != null && mounted) {
-        setState(() => _workerLatLng = LatLng(lat, lng));
-        _mapController?.animateCamera(CameraUpdate.newLatLng(_workerLatLng));
-        _updateRouteAndETA();
+        setState(() {
+          _workerLatLng = LatLng(lat as double, lng as double);
+        });
+        if (_workerLatLng != null) {
+          _mapController?.animateCamera(CameraUpdate.newLatLng(_workerLatLng!));
+          _updateRouteAndETA();
+        }
       }
     });
 
+    // 2. Fallback Source: workers (general updates)
+    _workerFallbackSub = FirebaseFirestore.instance
+        .collection('workers')
+        .doc(widget.professional.id)
+        .snapshots()
+        .listen((doc) {
+      // Only use fallback if primary source hasn't provided data yet
+      if (!doc.exists || _workerLatLng != null) return;
+      final lat = doc.data()?['lat'];
+      final lng = doc.data()?['lng'];
+      if (lat != null && lng != null && mounted) {
+        debugPrint('WorkerOnTheWayScreen: Using fallback location from workers collection');
+        setState(() {
+          _workerLatLng = LatLng(lat as double, lng as double);
+        });
+        if (_workerLatLng != null) {
+          _mapController?.animateCamera(CameraUpdate.newLatLng(_workerLatLng!));
+          _updateRouteAndETA();
+        }
+      }
+    });
+  }
+
+  /// Listen for job status changes to auto-navigate
+  void _listenToJobStatus() {
     _jobStatusSub = FirebaseFirestore.instance
         .collection('jobRequests')
         .doc(widget.jobRequestId)
@@ -112,9 +141,26 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
         .listen((doc) {
       if (!doc.exists) return;
       final status = doc.data()?['status'];
-      if (status == 'arrived' && mounted) {
-        // Navigate to Job Tracking Screen
+      
+      debugPrint('WorkerOnTheWayScreen: Job status is $status');
+
+      if ((status == 'arrived' || status == 'workStarted' || status == 'completed') && mounted) {
+        debugPrint('WorkerOnTheWayScreen: Navigating to JobTrackingScreen');
         _jobStatusSub?.cancel();
+        _customerLocationTimer?.cancel();
+        
+        // Show notification if it's the first time arriving
+        if (status == 'arrived') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('The worker has arrived!'),
+              backgroundColor: Color(0xFF2563EB),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+
+        // Navigate to Job Tracking Screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => JobTrackingScreen(
@@ -126,31 +172,85 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
         );
       }
     });
+
+    // Start updating customer location in Firestore periodically
+    _startCustomerLocationUpdates();
+  }
+
+  Timer? _customerLocationTimer;
+  void _startCustomerLocationUpdates() {
+    _customerLocationTimer?.cancel();
+    _customerLocationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (!mounted || widget.jobRequestId == null) {
+        timer.cancel();
+        return;
+      }
+
+      try {
+        final pos = await Geolocator.getCurrentPosition();
+        if (mounted) {
+          await FirebaseFirestore.instance
+              .collection('jobRequests')
+              .doc(widget.jobRequestId)
+              .update({
+            'customerLocation': GeoPoint(pos.latitude, pos.longitude),
+          });
+          debugPrint('WorkerOnTheWayScreen: Updated customer location in Firestore');
+        }
+      } catch (e) {
+        debugPrint('WorkerOnTheWayScreen: Error updating location: $e');
+      }
+    });
   }
 
   /// Fetch route polyline + ETA whenever locations update
   Future<void> _updateRouteAndETA() async {
-    if (_customerLatLng == null) return;
+    if (_customerLatLng == null || _workerLatLng == null) return;
 
-    final results = await Future.wait([
-      TrackingService.getRoutePoints(_workerLatLng, _customerLatLng!),
-      TrackingService.getETA(_workerLatLng, _customerLatLng!),
-    ]);
+    // Optimization: Only update route if the worker has moved significantly (>50m) 
+    // or if it has been more than 20 seconds since last update.
+    final now = DateTime.now();
+    if (_lastRouteUpdatePosition != null && _lastRouteUpdateTime != null) {
+      final distanceMoved = Geolocator.distanceBetween(
+        _lastRouteUpdatePosition!.latitude,
+        _lastRouteUpdatePosition!.longitude,
+        _workerLatLng!.latitude,
+        _workerLatLng!.longitude,
+      );
+      final timeDiff = now.difference(_lastRouteUpdateTime!);
 
-    if (!mounted) return;
-    setState(() {
-      _routePoints = results[0] as List<LatLng>;
-      final etaData = results[1] as Map<String, String>;
-      _eta = etaData['eta'] ?? '--';
-      _distance = etaData['distance'] ?? '--';
-    });
+      if (distanceMoved < 50 && timeDiff < const Duration(seconds: 20)) {
+        return; // Skip update
+      }
+    }
+
+    try {
+      final results = await Future.wait([
+        TrackingService.getRoutePoints(_workerLatLng!, _customerLatLng!),
+        TrackingService.getETA(_workerLatLng!, _customerLatLng!),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _lastRouteUpdatePosition = _workerLatLng;
+        _lastRouteUpdateTime = now;
+        _routePoints = results[0] as List<LatLng>;
+        final etaData = results[1] as Map<String, String>;
+        _eta = etaData['eta'] ?? '--';
+        _distance = etaData['distance'] ?? '--';
+      });
+    } catch (e) {
+      debugPrint('Error updating route/ETA: $e');
+    }
   }
 
   @override
   void dispose() {
     _workerLocationSub?.cancel();
+    _workerFallbackSub?.cancel();
     _jobStatusSub?.cancel();
     _customerLocationSub?.cancel();
+    _customerLocationTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
@@ -191,15 +291,15 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             markers: {
-              // Worker marker
-              Marker(
-                markerId: const MarkerId('worker'),
-                position: _workerLatLng,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueBlue,
+              if (_workerLatLng != null)
+                Marker(
+                  markerId: const MarkerId('worker'),
+                  position: _workerLatLng!,
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueBlue,
+                  ),
+                  infoWindow: InfoWindow(title: widget.professional.name),
                 ),
-                infoWindow: InfoWindow(title: widget.professional.name),
-              ),
               // Customer marker
               Marker(
                 markerId: const MarkerId('customer'),
@@ -290,6 +390,7 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
               professional: widget.professional,
               serviceTitle: widget.serviceTitle,
               eta: _eta,
+              jobRequestId: widget.jobRequestId,
             ),
           ),
         ],
@@ -302,11 +403,13 @@ class _TripSheet extends StatefulWidget {
   final Professional professional;
   final String serviceTitle;
   final String eta;
+  final String? jobRequestId;
 
   const _TripSheet({
     required this.professional,
     required this.serviceTitle,
     required this.eta,
+    this.jobRequestId,
   });
 
   @override
@@ -459,30 +562,81 @@ class _TripSheetState extends State<_TripSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Worker hasn't arrived yet button
-                SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.sync, size: 18),
-                    label: const Text(
-                      'Waiting for Worker to Arrive',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                
+                // Dynamic Status Button
+                if (widget.jobRequestId != null)
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('jobRequests')
+                        .doc(widget.jobRequestId)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      String label = 'Waiting for Worker to Arrive';
+                      Color btnColor = Colors.grey.shade400;
+                      IconData icon = Icons.sync;
+
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final status = snapshot.data!.get('status');
+                        if (status == 'arrived') {
+                          label = 'Worker has Arrived';
+                          btnColor = const Color(0xFF2563EB);
+                          icon = Icons.check_circle;
+                        } else if (status == 'workStarted') {
+                          label = 'Work in Progress';
+                          btnColor = Colors.green;
+                          icon = Icons.play_circle_outline;
+                        }
+                      }
+
+                      return SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {},
+                          icon: Icon(icon, size: 18),
+                          label: Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: btnColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                else
+                  SizedBox(
+                    height: 48,
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.sync, size: 18),
+                      label: const Text(
+                        'Waiting for Worker to Arrive',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.grey.shade400,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.grey.shade400,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
