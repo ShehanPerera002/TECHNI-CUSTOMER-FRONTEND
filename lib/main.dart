@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'core/session_manager.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/verification_screen.dart';
@@ -12,13 +13,14 @@ import 'screens/create_profile_screen.dart';
 import 'screens/email_login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/rating_screen.dart';
+import 'screens/ai_welcome_screen.dart';
+import 'screens/ai_chat_screen.dart';
+import 'screens/find_professional_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-
-  // Load environment variables
-  await dotenv.load();
+  debugPrint('[ENV] GEMINI_API_KEY loaded: ${dotenv.env['GEMINI_API_KEY'] != null}');
 
   try {
     await Firebase.initializeApp();
@@ -32,6 +34,7 @@ Future<void> main() async {
   }
 
   await _requestPermissions();
+  await SessionManager.initialize();
 
   runApp(const TechniApp());
 }
@@ -51,6 +54,16 @@ Future<void> _requestPermissions() async {
 class TechniApp extends StatelessWidget {
   const TechniApp({super.key});
 
+  static const Map<String, String> _serviceRoutes = {
+    '/find_plumber': 'Plumbing Services',
+    '/find_electrician': 'Electrical Services',
+    '/find_carpenter': 'Carpentry Services',
+    '/find_gardener': 'Gardening Services',
+    '/find_painter': 'Painting Services',
+    '/find_ac_tech': 'AC Services',
+    '/find_elv': 'ELV Services',
+  };
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -59,7 +72,8 @@ class TechniApp extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/',
       routes: {
-        '/': (context) => const WelcomeScreen(),
+        '/': (context) => const SessionGateScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
         '/signin': (context) => const SignInScreen(),
         '/login': (context) => const EmailLoginScreen(),
         '/verification': (context) => const VerificationScreen(),
@@ -67,7 +81,49 @@ class TechniApp extends StatelessWidget {
         '/createProfile': (context) => const CreateProfileScreen(),
         '/home': (context) => const MainScreen(),
         '/rating': (context) => const RatingScreen(),
+        '/ai-welcome': (context) => const AIWelcomeScreen(),
+        '/chat': (context) => const AIChatScreen(),
+        '/technician': (context) => const MainScreen(),
+      },
+      onGenerateRoute: (settings) {
+        final routeName = settings.name;
+        if (routeName != null && _serviceRoutes.containsKey(routeName)) {
+          final issueDescription = settings.arguments is String
+              ? settings.arguments as String
+              : null;
+          return MaterialPageRoute(
+            builder: (_) => FindProfessionalScreen(
+              serviceTitle: _serviceRoutes[routeName]!,
+              issueDescription: issueDescription,
+            ),
+            settings: settings,
+          );
+        }
+        return null;
       },
     );
+  }
+}
+
+class SessionGateScreen extends StatelessWidget {
+  const SessionGateScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      if (SessionManager.customerDocId == null ||
+          SessionManager.customerDocId!.trim().isEmpty) {
+        SessionManager.setCustomerDocId(user.uid);
+      }
+      return const MainScreen();
+    }
+
+    if (SessionManager.hasSession) {
+      return const MainScreen();
+    }
+
+    return const WelcomeScreen();
   }
 }
