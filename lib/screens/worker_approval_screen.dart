@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../core/booking_service.dart';
 import '../models/professional.dart';
@@ -31,33 +28,88 @@ class WorkerApprovalScreen extends StatefulWidget {
 class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
   List<Review> _reviews = [];
   bool _reviewsLoaded = false;
+  double? _workerAverageRating;
+  int? _workerReviewCount;
+  String? _workerBio; // Store actual worker bio from Firestore
+  bool _bioLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    _loadWorkerRatingSummary();
     _loadReviews();
+    _loadWorkerBio();
+  }
+
+  Future<void> _loadWorkerRatingSummary() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(widget.professional.id)
+          .get();
+
+      if (!doc.exists || !mounted) return;
+
+      final data = doc.data() ?? {};
+      setState(() {
+        _workerAverageRating = (data['averageRating'] as num?)?.toDouble();
+        _workerReviewCount = (data['ratingCount'] as num?)?.toInt();
+      });
+    } catch (_) {
+      // Keep model values when aggregate fetch fails.
+    }
+  }
+
+  Future<void> _loadWorkerBio() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(widget.professional.id)
+          .get();
+      
+      if (doc.exists) {
+        setState(() {
+          _workerBio = doc.data()?['bio'] as String?;
+          _bioLoaded = true;
+        });
+      } else {
+        setState(() => _bioLoaded = true);
+      }
+    } catch (e) {
+      debugPrint('Error loading worker bio: $e');
+      setState(() => _bioLoaded = true);
+    }
   }
 
   Future<void> _loadReviews() async {
     try {
-      final json = await rootBundle.loadString(
-        'assets/data/professional_reviews.json',
-      );
-      final map = jsonDecode(json) as Map<String, dynamic>;
-      final list = map[widget.professional.id] as List<dynamic>?;
-      if (list != null) {
-        setState(() {
-          _reviews = list
-              .map((e) => Review.fromJson(e as Map<String, dynamic>))
-              .toList();
-          _reviewsLoaded = true;
-        });
-      } else {
-        setState(() => _reviewsLoaded = true);
-      }
+      final snap = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(widget.professional.id)
+          .collection('reviews')
+          .orderBy('timestamp', descending: true)
+          .limit(20)
+          .get();
+
+      if (!mounted) return;
+      setState(() {
+        _reviews = snap.docs
+            .map((doc) => Review.fromFirestore(doc.data()))
+            .toList();
+        _reviewsLoaded = true;
+      });
     } catch (e) {
+      debugPrint('Error loading worker reviews: $e');
       setState(() => _reviewsLoaded = true);
     }
+  }
+
+  double get _displayRating {
+    return _workerAverageRating ?? widget.professional.rating;
+  }
+
+  int get _displayReviewCount {
+    return _workerReviewCount ?? widget.professional.reviewCount;
   }
 
   Future<void> _confirmWorker() async {
@@ -205,14 +257,14 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
                   ...List.generate(
                     5,
                     (i) => Icon(
-                      i < p.rating.floor() ? Icons.star : Icons.star_border,
+                      i < _displayRating.floor() ? Icons.star : Icons.star_border,
                       size: 18,
                       color: Colors.amber.shade700,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '${p.rating}',
+                    '${_displayRating.toStringAsFixed(1)} ($_displayReviewCount)',
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ],
@@ -370,8 +422,11 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          // ✅ Show actual worker bio from Firestore if available
           Text(
-            profile.description,
+            _bioLoaded && (_workerBio?.isNotEmpty ?? false)
+                ? _workerBio!
+                : profile.description,
             style: TextStyle(
               fontSize: 13,
               color: Colors.grey.shade800,
@@ -407,7 +462,7 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
               Icon(Icons.star, size: 16, color: Colors.amber.shade700),
               const SizedBox(width: 4),
               Text(
-                '${p.rating}',
+                '${_displayRating.toStringAsFixed(1)} ($_displayReviewCount reviews)',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ],
@@ -433,17 +488,31 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
   }
 
   Widget _buildReviewCard(Review r) {
+    final hasAvatar = r.avatarUrl.trim().isNotEmpty;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(radius: 16, backgroundImage: NetworkImage(r.avatarUrl)),
+          CircleAvatar(
+            radius: 16,
+            backgroundImage: hasAvatar ? NetworkImage(r.avatarUrl) : null,
+            child: hasAvatar ? null : const Icon(Icons.person, size: 16),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  r.customerName.trim().isEmpty ? 'Customer' : r.customerName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 3),
                 Row(
                   children: [
                     ...List.generate(
@@ -474,15 +543,6 @@ class _WorkerApprovalScreenState extends State<WorkerApprovalScreen> {
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  r.customerName,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
                 ),
               ],
             ),
