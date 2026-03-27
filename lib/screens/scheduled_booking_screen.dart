@@ -1,20 +1,39 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../core/booking_service.dart';
 import '../models/professional.dart';
 
 /// Confirmation screen shown after a customer schedules a worker.
+/// Persists scheduled bookings to Firestore `scheduledJobs`.
 class ScheduledBookingScreen extends StatefulWidget {
+  final String customerId;
+  final String customerName;
+  final String? customerPhone;
+  final double customerLat;
+  final double customerLng;
   final String serviceTitle;
+  final String category;
   final String scheduledDate;
   final String scheduledTime;
+  final DateTime scheduledFor;
+  final String? issueDescription;
+  final String? issueImageUrl;
   final List<Professional> availableWorkers;
 
   const ScheduledBookingScreen({
     super.key,
+    required this.customerId,
+    required this.customerName,
+    this.customerPhone,
+    required this.customerLat,
+    required this.customerLng,
     required this.serviceTitle,
+    required this.category,
     required this.scheduledDate,
     required this.scheduledTime,
+    required this.scheduledFor,
+    this.issueDescription,
+    this.issueImageUrl,
     required this.availableWorkers,
   });
 
@@ -26,12 +45,37 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
   @override
   void initState() {
     super.initState();
-    // Save the scheduled booking
-    BookingService.instance.addScheduledBooking(
-      serviceTitle: widget.serviceTitle,
-      scheduledDate: widget.scheduledDate,
-      scheduledTime: widget.scheduledTime,
-    );
+    _persistToFirestore();
+  }
+
+  Future<void> _persistToFirestore() async {
+    try {
+      final doc = <String, dynamic>{
+        'customerId': widget.customerId,
+        'customerName': widget.customerName,
+        'customerLocation': GeoPoint(widget.customerLat, widget.customerLng),
+        'serviceTitle': widget.serviceTitle,
+        'description': widget.issueDescription,
+        'category': widget.category,
+        'scheduledDateStr': widget.scheduledDate,
+        'scheduledTimeStr': widget.scheduledTime,
+        'scheduledAt': Timestamp.fromDate(widget.scheduledFor),
+        'status': 'pending',
+        'workerId': null,
+        'workerName': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      if (widget.customerPhone != null && widget.customerPhone!.trim().isNotEmpty) {
+        doc['customerPhone'] = widget.customerPhone;
+      }
+      if (widget.issueImageUrl != null && widget.issueImageUrl!.trim().isNotEmpty) {
+        doc['issueImageUrl'] = widget.issueImageUrl;
+      }
+      await FirebaseFirestore.instance.collection('scheduledJobs').add(doc);
+      debugPrint('[ScheduledBooking] Saved to Firestore for ${widget.customerId}');
+    } catch (e) {
+      debugPrint('[ScheduledBooking] Error saving to Firestore: $e');
+    }
   }
 
   @override
@@ -62,7 +106,6 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-              // Success icon
               Container(
                 width: 100,
                 height: 100,
@@ -98,7 +141,6 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
               ),
               const SizedBox(height: 28),
 
-              // Booking details card
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -143,7 +185,6 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Workers preview
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -214,7 +255,6 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
               ),
               const SizedBox(height: 20),
 
-              // What happens next
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -233,19 +273,19 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _StepItem(
+                    const _StepItem(
                       number: '1',
                       text: 'Your booking request is sent to nearby workers',
                     ),
-                    _StepItem(
+                    const _StepItem(
                       number: '2',
                       text: 'The first worker to accept will be assigned',
                     ),
-                    _StepItem(
+                    const _StepItem(
                       number: '3',
                       text: 'You\'ll be notified once a worker is confirmed',
                     ),
-                    _StepItem(
+                    const _StepItem(
                       number: '4',
                       text: 'Review the worker\'s profile before they arrive',
                     ),
@@ -254,7 +294,6 @@ class _ScheduledBookingScreenState extends State<ScheduledBookingScreen> {
               ),
               const SizedBox(height: 28),
 
-              // Buttons
               SizedBox(
                 height: 50,
                 child: FilledButton(
