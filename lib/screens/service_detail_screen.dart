@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -37,7 +38,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
   String _textBeforeListening = '';
   static const _minConvertingDuration = Duration(milliseconds: 800);
 
+  // Pricing from Firestore
+  Map<String, dynamic>? _pricingData;
+  bool _pricingLoading = true;
+
   ServiceDetailData get service => widget.service;
+
+  /// Maps service title → pricing_logic document ID.
+  String _pricingDocId() {
+    final t = service.title.toLowerCase().replaceAll(' ', '_');
+    const map = {
+      'plumber': 'plumber',
+      'electrician': 'electrician',
+      'gardener': 'gardener',
+      'carpenter': 'carpenter',
+      'painter': 'painter',
+      'ac_technician': 'ac_technician',
+      'elv_repairer': 'elv_repairer',
+    };
+    return map[t] ?? t;
+  }
 
   bool get _isFormValid =>
       _issueController.text.trim().isNotEmpty || _selectedImage != null;
@@ -51,6 +71,24 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
     _initSpeech();
+    _fetchPricing();
+  }
+
+  Future<void> _fetchPricing() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('pricing_logic')
+          .doc(_pricingDocId())
+          .get();
+      if (mounted) {
+        setState(() {
+          _pricingData = doc.data();
+          _pricingLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _pricingLoading = false);
+    }
   }
 
   Future<void> _initSpeech() async {
@@ -208,6 +246,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
                         MaterialPageRoute(
                           builder: (context) => FindProfessionalScreen(
                             serviceTitle: service.pageTitle,
+                            issueDescription: _issueController.text.trim(),
+                            issueImageFile: _selectedImage,
                           ),
                         ),
                       );
@@ -479,15 +519,46 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        children: [
-          _buildPricingRow("Inspection fee", service.inspectionFee),
-          const SizedBox(height: 12),
-          _buildPricingRow("Hourly Rate", service.hourlyRate),
-          const SizedBox(height: 12),
-          _buildPricingRow("Materials", service.materials),
-        ],
-      ),
+      child: _pricingLoading
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          : _pricingData == null
+              ? const Text(
+                  'Pricing unavailable',
+                  style: TextStyle(color: Colors.grey),
+                )
+              : Column(
+                  children: [
+                    _buildPricingRow(
+                      'Base Fare',
+                      'Rs ${(_pricingData!['base_fare'] as num).toStringAsFixed(0)}',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPricingRow(
+                      'Day Rate (per hr)',
+                      'Rs ${(_pricingData!['day_rate'] as num).toStringAsFixed(0)} / hr',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPricingRow(
+                      'Night Rate (per hr)',
+                      'Rs ${(_pricingData!['night_rate'] as num).toStringAsFixed(0)} / hr',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPricingRow(
+                      'Emergency Rate (per hr)',
+                      'Rs ${(_pricingData!['emergency_rate'] as num).toStringAsFixed(0)} / hr',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPricingRow(
+                      'Service Fee',
+                      'Rs ${(_pricingData!['service_fee'] as num).toStringAsFixed(0)}',
+                    ),
+                  ],
+                ),
     );
   }
 
