@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FeedbackScreen extends StatefulWidget {
@@ -18,6 +21,7 @@ class FeedbackScreen extends StatefulWidget {
 }
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
+  static const String _baseUrl = 'https://techni-backend.onrender.com';
   int _rating = 5;
   final _commentController = TextEditingController();
   bool _isSubmitting = false;
@@ -26,27 +30,48 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final now = FieldValue.serverTimestamp();
+      final user = FirebaseAuth.instance.currentUser;
+      String reviewerName = user?.displayName?.trim() ?? '';
 
-      // 1. Update the 'completed jobs' record with rating and review
-      await FirebaseFirestore.instance 
-          .collection('completed jobs')
-          .doc(widget.jobId)
-          .update({
-        'rating': _rating,
-        'review': _commentController.text,
-        'feedbackAt': now,
-      });
+      if (reviewerName.isEmpty && user?.uid != null) {
+        final customerDoc = await FirebaseFirestore.instance
+            .collection('customers')
+            .doc(user!.uid)
+            .get();
+        if (customerDoc.exists) {
+          final data = customerDoc.data() ?? {};
+          reviewerName =
+              (data['name'] ?? data['fullName'] ?? '').toString().trim();
+        }
+      }
 
-      // 2. Also update the worker's average rating (Optional but good)
-      // For now, just ensure the worker is marked as AVAILABLE again
-      await FirebaseFirestore.instance
-          .collection('workers')
-          .doc(widget.workerId)
-          .update({
-        'isAvailable': true,
-        'activeJobId': null,
-      });
+      if (reviewerName.isEmpty) {
+        reviewerName = 'Customer';
+      }
+
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/job/submit-review'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'jobId': widget.jobId,
+              'workerId': widget.workerId,
+              'rating': _rating,
+              'comment': _commentController.text.trim(),
+              'reviewerName': reviewerName,
+              'reviewerId': user?.uid,
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode != 200) {
+        String message = 'Failed to submit feedback';
+        try {
+          final data = jsonDecode(response.body);
+          message = data['error'] ?? message;
+        } catch (_) {}
+        throw Exception(message);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
