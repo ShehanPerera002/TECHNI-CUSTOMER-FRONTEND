@@ -6,10 +6,12 @@ class Professional {
   final String id;
   final String name;
   final double rating;
+  final int reviewCount;
   final String timeToBook;
   final LatLng location;
   final String avatarUrl;
   final String phoneNumber;
+  final String? category;
   final String? fcmToken;
   final bool isAvailable;
   final String? activeJobId;
@@ -18,10 +20,12 @@ class Professional {
     required this.id,
     required this.name,
     required this.rating,
+    this.reviewCount = 0,
     required this.timeToBook,
     required this.location,
     required this.avatarUrl,
     required this.phoneNumber,
+    this.category,
     this.fcmToken,
     this.isAvailable = true,
     this.activeJobId,
@@ -39,10 +43,12 @@ class Professional {
       id: doc.id,
       name: data['name'] ?? '',
       rating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: (data['ratingCount'] as num?)?.toInt() ?? 0,
       timeToBook: 'Calculating...', // This will be calculated on the fly later
       location: parseGeoPoint(data['lastLocation'] ?? data['location']),
       avatarUrl: data['profileUrl'] ?? '',
       phoneNumber: data['phoneNumber'] ?? '',
+      category: data['category'],
       fcmToken: data['fcmToken'],
       isAvailable: data['isAvailable'] ?? false,
       activeJobId: data['activeJobId'],
@@ -54,10 +60,12 @@ class Professional {
       id: id,
       name: name,
       rating: rating,
+      reviewCount: reviewCount,
       timeToBook: timeToBook ?? this.timeToBook,
       location: location ?? this.location,
       avatarUrl: avatarUrl,
       phoneNumber: phoneNumber,
+      category: category,
       fcmToken: fcmToken,
       isAvailable: isAvailable,
       activeJobId: activeJobId,
