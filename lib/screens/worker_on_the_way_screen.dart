@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/tracking_service.dart';
 import '../models/professional.dart';
 import 'emergency_help_screen.dart';
-import 'in_app_call_screen.dart';
-import 'in_app_chat_screen.dart';
 import 'job_tracking_screen.dart';
 
 class WorkerOnTheWayScreen extends StatefulWidget {
@@ -42,6 +41,13 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
   StreamSubscription<DocumentSnapshot>? _workerFallbackSub;
   StreamSubscription<DocumentSnapshot>? _jobStatusSub;
   StreamSubscription<Position>? _customerLocationSub;
+
+  ImageProvider? _avatarProvider(String? url) {
+    final value = (url ?? '').trim();
+    if (value.isEmpty) return null;
+    if (!value.startsWith('http')) return null;
+    return NetworkImage(value);
+  }
 
   @override
   void initState() {
@@ -134,9 +140,14 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
 
   /// Listen for job status changes to auto-navigate
   void _listenToJobStatus() {
+    if (widget.jobRequestId == null) {
+      debugPrint('WorkerOnTheWayScreen: jobRequestId is null, status listener not started');
+      return;
+    }
+
     _jobStatusSub = FirebaseFirestore.instance
         .collection('jobRequests')
-        .doc(widget.jobRequestId)
+        .doc(widget.jobRequestId!)
         .snapshots()
         .listen((doc) {
       if (!doc.exists) return;
@@ -144,7 +155,11 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
       
       debugPrint('WorkerOnTheWayScreen: Job status is $status');
 
-      if ((status == 'arrived' || status == 'workStarted' || status == 'completed') && mounted) {
+        if ((status == 'arrived' ||
+              status == 'workerStartedWork' ||
+              status == 'workStarted' ||
+              status == 'completed') &&
+          mounted) {
         debugPrint('WorkerOnTheWayScreen: Navigating to JobTrackingScreen');
         _jobStatusSub?.cancel();
         _customerLocationTimer?.cancel();
@@ -167,6 +182,7 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
               workerName: widget.professional.name,
               serviceTitle: widget.serviceTitle,
               jobRequestId: widget.jobRequestId,
+              workerAvatarUrl: widget.professional.avatarUrl,
             ),
           ),
         );
@@ -175,6 +191,28 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
 
     // Start updating customer location in Firestore periodically
     _startCustomerLocationUpdates();
+  }
+
+  Future<void> _callWorkerPhone() async {
+    final raw = widget.professional.phoneNumber;
+    final phone = raw.trim();
+
+    if (phone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Worker phone number not available')),
+        );
+      }
+      return;
+    }
+
+    final uri = Uri.parse('tel:$phone');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open phone dialer')),
+      );
+    }
   }
 
   Timer? _customerLocationTimer;
@@ -239,9 +277,36 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
         _eta = etaData['eta'] ?? '--';
         _distance = etaData['distance'] ?? '--';
       });
+
+      // Save customer-side ETA/km estimate for pricing fallback on backend.
+      final estimatedKm = _parseDistanceToKm(_distance);
+      if (widget.jobRequestId != null && estimatedKm != null) {
+        await FirebaseFirestore.instance
+            .collection('jobRequests')
+            .doc(widget.jobRequestId)
+            .set({
+          'distanceKmEstimate': estimatedKm,
+          'distanceEstimateText': _distance,
+          'etaEstimateText': _eta,
+        }, SetOptions(merge: true));
+      }
     } catch (e) {
       debugPrint('Error updating route/ETA: $e');
     }
+  }
+
+  double? _parseDistanceToKm(String distanceText) {
+    final text = distanceText.trim().toLowerCase();
+    if (text.isEmpty || text == '--') return null;
+
+    final value = double.tryParse(
+      text.replaceAll(RegExp(r'[^0-9.]'), ''),
+    );
+    if (value == null) return null;
+
+    if (text.contains('km')) return value;
+    if (text.contains('m')) return value / 1000.0;
+    return value;
   }
 
   @override
@@ -417,8 +482,36 @@ class _TripSheet extends StatefulWidget {
 }
 
 class _TripSheetState extends State<_TripSheet> {
+  ImageProvider? _tripAvatarProvider(String? url) {
+    final value = (url ?? '').trim();
+    if (value.isEmpty || !value.startsWith('http')) return null;
+    return NetworkImage(value);
+  }
+
+  Future<void> _callWorkerPhone() async {
+    final phone = widget.professional.phoneNumber.trim();
+
+    if (phone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Worker phone number not available')),
+        );
+      }
+      return;
+    }
+
+    final uri = Uri.parse('tel:$phone');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open phone dialer')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final avatar = _tripAvatarProvider(widget.professional.avatarUrl);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -473,9 +566,10 @@ class _TripSheetState extends State<_TripSheet> {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundImage: NetworkImage(
-                        widget.professional.avatarUrl,
-                      ),
+                      backgroundImage: avatar,
+                      child: avatar == null
+                          ? const Icon(Icons.person, size: 24)
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -504,29 +598,7 @@ class _TripSheetState extends State<_TripSheet> {
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F1F1),
                       ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => InAppChatScreen(
-                            professional: widget.professional,
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.chat_bubble_outline),
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F1F1),
-                      ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => InAppCallScreen(
-                            professional: widget.professional,
-                          ),
-                        ),
-                      ),
+                      onPressed: _callWorkerPhone,
                       icon: const Icon(Icons.call),
                     ),
                   ],
@@ -581,6 +653,10 @@ class _TripSheetState extends State<_TripSheet> {
                           label = 'Worker has Arrived';
                           btnColor = const Color(0xFF2563EB);
                           icon = Icons.check_circle;
+                        } else if (status == 'workerStartedWork') {
+                          label = 'Worker Ready to Start';
+                          btnColor = const Color(0xFF2563EB);
+                          icon = Icons.play_circle;
                         } else if (status == 'workStarted') {
                           label = 'Work in Progress';
                           btnColor = Colors.green;
@@ -645,4 +721,4 @@ class _TripSheetState extends State<_TripSheet> {
     );
   }
 }
-
+
