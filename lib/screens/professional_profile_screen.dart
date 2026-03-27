@@ -1,7 +1,5 @@
-import 'dart:convert';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/professional.dart';
 import '../models/professional_profile_data.dart';
@@ -26,33 +24,64 @@ class ProfessionalProfileScreen extends StatefulWidget {
 class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   List<Review> _reviews = [];
   bool _reviewsLoaded = false;
+  double? _workerAverageRating;
+  int? _workerReviewCount;
 
   @override
   void initState() {
     super.initState();
+    _loadWorkerRatingSummary();
     _loadReviews();
+  }
+
+  Future<void> _loadWorkerRatingSummary() async {
+    try {
+      final workerDoc = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(widget.professional.id)
+          .get();
+
+      if (!workerDoc.exists || !mounted) return;
+
+      final data = workerDoc.data() ?? {};
+      setState(() {
+        _workerAverageRating = (data['averageRating'] as num?)?.toDouble();
+        _workerReviewCount = (data['ratingCount'] as num?)?.toInt();
+      });
+    } catch (_) {
+      // Keep existing model values when aggregate lookup fails.
+    }
   }
 
   Future<void> _loadReviews() async {
     try {
-      final json = await rootBundle.loadString(
-        'assets/data/professional_reviews.json',
-      );
-      final map = jsonDecode(json) as Map<String, dynamic>;
-      final list = map[widget.professional.id] as List<dynamic>?;
-      if (list != null) {
-        setState(() {
-          _reviews = list
-              .map((e) => Review.fromJson(e as Map<String, dynamic>))
-              .toList();
-          _reviewsLoaded = true;
-        });
-      } else {
-        setState(() => _reviewsLoaded = true);
-      }
+      final snap = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(widget.professional.id)
+          .collection('reviews')
+          .orderBy('timestamp', descending: true)
+          .limit(50)
+          .get();
+
+      if (!mounted) return;
+      setState(() {
+        _reviews = snap.docs
+            .map((doc) => Review.fromFirestore(doc.data()))
+            .toList();
+        _reviewsLoaded = true;
+      });
     } catch (e) {
+      debugPrint('Error loading worker reviews: $e');
       setState(() => _reviewsLoaded = true);
     }
+  }
+
+  double get _displayRating {
+    return _workerAverageRating ?? widget.professional.rating;
+  }
+
+  int get _displayReviewCount {
+    return _workerReviewCount ?? widget.professional.reviewCount;
   }
 
   @override
@@ -136,14 +165,14 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             ...List.generate(
               5,
               (i) => Icon(
-                i < p.rating.floor() ? Icons.star : Icons.star_border,
+                i < _displayRating.floor() ? Icons.star : Icons.star_border,
                 size: 20,
                 color: Colors.amber.shade700,
               ),
             ),
             const SizedBox(width: 6),
             Text(
-              '${p.rating} (247 reviews)',
+              '${_displayRating.toStringAsFixed(1)} ($_displayReviewCount reviews)',
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
           ],
@@ -299,7 +328,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
               Icon(Icons.star, size: 18, color: Colors.amber.shade700),
               const SizedBox(width: 4),
               Text(
-                '${p.rating} (${_reviews.length} reviews)',
+                '${_displayRating.toStringAsFixed(1)} ($_displayReviewCount reviews)',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
             ],
@@ -325,12 +354,17 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   }
 
   Widget _buildReviewCard(Review r) {
+    final hasAvatar = r.avatarUrl.trim().isNotEmpty;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(radius: 20, backgroundImage: NetworkImage(r.avatarUrl)),
+          CircleAvatar(
+            radius: 20,
+            backgroundImage: hasAvatar ? NetworkImage(r.avatarUrl) : null,
+            child: hasAvatar ? null : const Icon(Icons.person),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
