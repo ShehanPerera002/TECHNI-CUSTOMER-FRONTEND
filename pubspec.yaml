@@ -73,7 +73,6 @@ flutter:
     - .env
     - assets/images/
     - assets/data/professional_reviews.json
-    - .env
     # - assets/icons/
 
   # To add assets to your application, add an assets section, like this:
