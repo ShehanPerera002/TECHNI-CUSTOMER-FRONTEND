@@ -1,19 +1,25 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'emergency_help_screen.dart';
 import 'feedback_screen.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final String workerName;
   final String serviceTitle;
   final String? jobRequestId;
+  final String? workerAvatarUrl;
 
   const JobTrackingScreen({
     super.key,
     required this.workerName,
     required this.serviceTitle,
     this.jobRequestId,
+    this.workerAvatarUrl,
   });
 
   @override
@@ -21,19 +27,30 @@ class JobTrackingScreen extends StatefulWidget {
 }
 
 class _JobTrackingScreenState extends State<JobTrackingScreen> {
+  static const String _baseUrl = 'https://techni-backend.onrender.com';
+  
   bool arrived = false;
+  bool workerReadyToStart = false; // worker pressed Start Job, waiting for customer
   bool workStarted = false;
   bool workDone = false;
+  bool _isAccepting = false;
   String? _workerId;
+  String? _workerBio; // Store worker's bio
   int timerSeconds = 0;
   DateTime? _jobStartedAt;
   Timer? _timer;
+  Timer? _syncTimer; // Sync timer with backend every 5 seconds
   StreamSubscription? _jobSub;
+  StreamSubscription? _completedJobSub;
+  StreamSubscription? _workerProfileSub;
+  double? _realFare; // Store the real fare from backend calculation
+  String? _workerProfileUrl;
 
   @override
   void initState() {
     super.initState();
     _listenToJobRequest();
+    _listenToCompletedJob(); // Listen for real price from backend
   }
 
   void _listenToJobRequest() {
@@ -52,37 +69,133 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
           debugPrint('JobTrackingScreen: Status changed to $status');
 
           setState(() {
-            arrived =
-                (status == 'arrived' ||
+            arrived = (status == 'arrived' ||
+                status == 'workerStartedWork' ||
                 status == 'workStarted' ||
                 status == 'completed');
-            _workerId = data['workerId'];
+            workerReadyToStart = (status == 'workerStartedWork');
+            final newWorkerId = data['workerId']?.toString();
+            if (newWorkerId != _workerId) {
+              _workerId = newWorkerId;
+              _listenToWorkerProfile();
+            }
+            _workerBio = data['workerBio'];
+            final url = data['workerProfileUrl']?.toString();
+            if (url != null && url.trim().isNotEmpty) {
+              _workerProfileUrl = url;
+            }
 
-            if (status == 'workStarted' || status == 'completed') {
+            if (status == 'workStarted') {
+              workerReadyToStart = false;
+              workStarted = true;
+              workDone = false;
               final startedAt = data['jobStartedAt'];
               if (startedAt is Timestamp) {
                 _jobStartedAt = startedAt.toDate();
-                if (status == 'workStarted') {
-                  workStarted = true;
-                  workDone = false;
-                  _resumeTimer();
-                } else if (status == 'completed') {
-                  workStarted = true;
-                  workDone = true;
-                  _stopTimer();
-                  // Calculate final seconds from completion time if available
-                  final completedAt = data['completedAt'];
-                  if (completedAt is Timestamp) {
-                    timerSeconds = math.max(
-                      0,
-                      completedAt.toDate().difference(_jobStartedAt!).inSeconds,
-                    );
-                  }
-                }
               }
+              _resumeTimer();
+              _startTimerSync();
             }
           });
         });
+  }
+
+  void _listenToWorkerProfile() {
+    final wid = _workerId;
+    if (wid == null || wid.trim().isEmpty) return;
+
+    _workerProfileSub?.cancel();
+    _workerProfileSub = FirebaseFirestore.instance
+        .collection('workers')
+        .doc(wid)
+        .snapshots()
+        .listen((doc) {
+      if (!mounted || !doc.exists) return;
+      final data = doc.data() ?? {};
+      final profileUrl = data['profileUrl']?.toString();
+      if (profileUrl != null && profileUrl.trim().isNotEmpty) {
+        setState(() {
+          _workerProfileUrl = profileUrl;
+        });
+      }
+    });
+  }
+
+  ImageProvider? _workerAvatarImage() {
+    final fromProfile = (_workerProfileUrl ?? '').trim();
+    if (fromProfile.isNotEmpty && fromProfile.startsWith('http')) {
+      return NetworkImage(fromProfile);
+    }
+    final fromArg = (widget.workerAvatarUrl ?? '').trim();
+    if (fromArg.isNotEmpty && fromArg.startsWith('http')) {
+      return NetworkImage(fromArg);
+    }
+    return null;
+  }
+
+  /// Listen to the "completed jobs" collection for real fare from backend
+  void _listenToCompletedJob() {
+    if (widget.jobRequestId == null) return;
+
+    _completedJobSub?.cancel();
+    _completedJobSub = FirebaseFirestore.instance
+        .collection('completed jobs')
+        .doc(widget.jobRequestId)
+        .snapshots()
+        .listen((doc) {
+          if (!doc.exists || !mounted) return;
+          final data = doc.data()!;
+          final fare = data['fare'];
+
+          if (fare != null && (fare as num) > 0) {
+            final durationSecs = data['durationSeconds'];
+            _stopTimer();
+            _syncTimer?.cancel();
+            setState(() {
+              _realFare = fare.toDouble();
+              workStarted = true;
+              workDone = true;
+              if (durationSecs != null) {
+                timerSeconds = (durationSecs as num).toInt();
+              }
+            });
+            debugPrint('JobTrackingScreen: Job complete. Fare: $_realFare');
+          }
+        });
+  }
+
+  /// Start syncing timer with backend every 5 seconds to keep timers in sync
+  void _startTimerSync() {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (mounted && (workStarted && !workDone)) {
+        _syncTimerWithBackend();
+      }
+    });
+  }
+
+  Future<void> _syncTimerWithBackend() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/job/${widget.jobRequestId}/elapsed-time'),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final backendElapsedSeconds = data['elapsedSeconds'] ?? 0;
+          // Sync local timer with backend if difference is > 2 seconds
+          if ((timerSeconds - backendElapsedSeconds).abs() > 2) {
+            setState(() {
+              timerSeconds = backendElapsedSeconds;
+              debugPrint('[TIMER_SYNC] Customer synced with backend: $timerSeconds seconds');
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[TIMER_SYNC_CUSTOMER] Error: $e');
+    }
   }
 
   void _resumeTimer() {
@@ -105,62 +218,41 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     _timer = null;
   }
 
-  Future<void> _startWork() async {
-    if (widget.jobRequestId == null) return;
+  /// Customer accepts the worker's start request → backend sets workStarted + jobStartedAt
+  Future<void> _acceptStart() async {
+    if (_isAccepting || widget.jobRequestId == null) return;
+    setState(() => _isAccepting = true);
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/job/confirm-start'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'jobId': widget.jobRequestId}),
+      ).timeout(const Duration(seconds: 10));
 
-    await FirebaseFirestore.instance
-        .collection('jobRequests')
-        .doc(widget.jobRequestId)
-        .update({
-          'status': 'workStarted',
-          'jobStartedAt': FieldValue.serverTimestamp(),
-        });
-  }
-
-  Future<void> _finishWork() async {
-    if (widget.jobRequestId == null) return;
-
-    final docRef = FirebaseFirestore.instance
-        .collection('jobRequests')
-        .doc(widget.jobRequestId);
-
-    final snapshot = await docRef.get();
-    if (!snapshot.exists) return;
-
-    final data = snapshot.data() ?? {};
-    final now = FieldValue.serverTimestamp();
-    final fare = _estimatePrice(timerSeconds).toDouble();
-    final duration = timerSeconds;
-
-    // 1. Update the original request in jobRequests
-    await docRef.update({
-      'status': 'completed',
-      'completedAt': now,
-      'fare': fare,
-      'durationSeconds': duration,
-    });
-
-    // 2. Create a record in the dedicated "completed jobs" collection for the worker's history
-    await FirebaseFirestore.instance
-        .collection('completed jobs')
-        .doc(widget.jobRequestId)
-        .set({
-          ...data,
-          'status': 'completed',
-          'completedAt': now,
-          'fare': fare,
-          'durationSeconds': duration,
-        }, SetOptions(merge: true));
-
-    debugPrint(
-      'JobTrackingScreen: Job finalized and moved to completed jobs collection',
-    );
+      if (response.statusCode != 200 && mounted) {
+        final body = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(body['error'] ?? 'Failed to accept')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connection error — check backend')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAccepting = false);
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _syncTimer?.cancel();
     _jobSub?.cancel();
+    _completedJobSub?.cancel();
+    _workerProfileSub?.cancel();
     super.dispose();
   }
 
@@ -174,6 +266,26 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
+      floatingActionButton: !workDone
+          ? FloatingActionButton(
+              heroTag: 'jobTrackingEmergencyFab',
+              backgroundColor: const Color(0xFFFF2A2A),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EmergencyHelpScreen(
+                      serviceTitle: widget.serviceTitle,
+                    ),
+                  ),
+                );
+              },
+              child: const Icon(
+                Icons.notifications_active,
+                color: Colors.white,
+              ),
+            )
+          : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -183,8 +295,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
             const SizedBox(height: 24),
             _statusSection(),
             const SizedBox(height: 32),
-            if (arrived && !workStarted)
-              _actionButton('Start Work', _startWork, Colors.green)
+            if (arrived && !workerReadyToStart && !workStarted)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _actionButton('Call Worker', _callWorker, Colors.orange),
+                ],
+              )
+            else if (workerReadyToStart)
+              _acceptStartCard()
             else if (workStarted && !workDone)
               _timerSection()
             else if (workDone)
@@ -196,6 +315,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   }
 
   Widget _workerInfoCard() {
+    final avatarImage = _workerAvatarImage();
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -214,7 +334,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
           CircleAvatar(
             radius: 30,
             backgroundColor: Colors.blue.shade100,
-            child: const Icon(Icons.person, size: 40, color: Colors.blue),
+            backgroundImage: avatarImage,
+            child: avatarImage == null
+                ? const Icon(Icons.person, size: 40, color: Colors.blue)
+                : null,
           ),
           const SizedBox(height: 12),
           Text(
@@ -225,6 +348,25 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
             widget.serviceTitle,
             style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           ),
+          // Display worker bio if available
+          if (_workerBio != null && _workerBio!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _workerBio!,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -307,9 +449,80 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _actionButton('Finish Work', _finishWork, Colors.blue),
+          const Text(
+            'Worker is currently working...',
+            style: TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Timer will stop when worker ends the job.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _acceptStartCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.notifications_active, color: Colors.blue, size: 48),
+          const SizedBox(height: 12),
+          const Text(
+            'Worker is ready to start!',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tap Accept to start the job and the timer.',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _actionButton('Call Worker', _callWorker, Colors.orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isAccepting ? null : _acceptStart,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isAccepting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Accept Start',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -334,7 +547,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
   }
 
   Widget _summarySection() {
-    final finalPrice = _estimatePrice(timerSeconds);
+    final finalPrice = _realFare;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -357,7 +571,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
           const SizedBox(height: 24),
           _summaryRow('Duration', _formatTime(timerSeconds)),
           const Divider(),
-          _summaryRow('Total Price', 'Rs. $finalPrice'),
+          _summaryRow(
+            'Total Price',
+            finalPrice != null
+                ? 'Rs. ${finalPrice.toStringAsFixed(0)}'
+                : 'Calculating...',
+            subtitle: finalPrice != null ? '(Final Amount)' : null,
+          ),
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () {
@@ -394,7 +614,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     );
   }
 
-  Widget _summaryRow(String label, String value) {
+  Widget _summaryRow(String label, String value, {String? subtitle}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -404,13 +624,96 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
             label,
             style: const TextStyle(fontSize: 16, color: Colors.black54),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  /// Call worker when they're on the way
+  Future<void> _callWorker() async {
+    try {
+      String? workerPhone;
+      
+      if (widget.jobRequestId != null) {
+        final jobDoc = await FirebaseFirestore.instance
+            .collection('jobRequests')
+            .doc(widget.jobRequestId)
+            .get();
+
+        if (jobDoc.exists) {
+          final data = jobDoc.data()!;
+          workerPhone = (data['workerPhone'] ?? data['workerPhoneNumber'])
+              ?.toString()
+              .trim();
+        }
+      }
+
+      final workerId = _workerId;
+      if ((workerPhone == null || workerPhone.isEmpty) &&
+          workerId != null &&
+          workerId.isNotEmpty) {
+        final workerDoc = await FirebaseFirestore.instance
+            .collection('workers')
+            .doc(workerId)
+            .get();
+
+        if (workerDoc.exists) {
+          final workerData = workerDoc.data()!;
+          workerPhone = (workerData['phoneNumber'] ??
+                  workerData['workerPhone'] ??
+                  workerData['workerPhoneNumber'])
+              ?.toString()
+              .trim();
+        }
+      }
+
+      if (workerPhone == null || workerPhone.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Worker phone number not available'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final url = Uri.parse('tel:$workerPhone');
+      final launched = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open phone dialer')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error calling worker: $e')),
+        );
+      }
+    }
   }
 
   String _formatTime(int seconds) {
@@ -420,10 +723,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     return seconds >= 3600 ? '$h:$m:$s' : '$m:$s';
   }
 
-  int _estimatePrice(int seconds) {
-    // Simple price estimation: Rs. 100 per 10 minutes
-    return 100 * ((seconds / 600).ceil());
-  }
+  int _estimatePrice(int seconds) => 100 * ((seconds / 600).ceil());
 }
 
 class _FeedbackForm extends StatefulWidget {
