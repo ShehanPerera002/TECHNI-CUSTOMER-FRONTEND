@@ -372,7 +372,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            BookingService.instance.logServiceSearch('AI Assistant');
+            Navigator.pushNamed(context, '/ai');
+          },
           backgroundColor: const Color(0xFF2563EB),
           child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
         ),
