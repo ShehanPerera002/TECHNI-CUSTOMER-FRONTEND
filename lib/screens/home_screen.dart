@@ -7,6 +7,7 @@ import '../models/service_detail_data.dart';
 import '../widgets/carousel_indicators.dart';
 import '../widgets/carousel_slide_card.dart';
 import '../widgets/service_card.dart';
+import 'ai_welcome_screen.dart';
 import 'service_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -372,7 +373,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AIWelcomeScreen(),
+              ),
+            );
+          },
           backgroundColor: const Color(0xFF2563EB),
           child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
         ),
