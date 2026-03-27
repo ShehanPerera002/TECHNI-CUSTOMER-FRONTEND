@@ -7,9 +7,11 @@ class JobRequest {
   final String customerName;
   final String? customerPhone;
   final String? workerId;
+  final String? workerPhone;
   final String status;
   final String jobType;
   final String? description;
+  final String? issueImageUrl;
   final LatLng customerLocation;
   final LatLng? workerLocation;
   final List<String> notifiedWorkerIds;
@@ -30,9 +32,11 @@ class JobRequest {
     required this.customerName,
     this.customerPhone,
     this.workerId,
+    this.workerPhone,
     required this.status,
     required this.jobType,
     this.description,
+    this.issueImageUrl,
     required this.customerLocation,
     this.workerLocation,
     this.notifiedWorkerIds = const [],
@@ -75,9 +79,11 @@ class JobRequest {
       customerName: data['customerName'] ?? '',
       customerPhone: data['customerPhone'],
       workerId: data['workerId'],
+      workerPhone: data['workerPhone'],
       status: data['status'] ?? 'searching',
       jobType: data['jobType'] ?? '',
       description: data['description'],
+      issueImageUrl: data['issueImageUrl']?.toString(),
       customerLocation: parseGeoPoint(data['customerLocation']),
       workerLocation: data['workerLocation'] != null ? parseGeoPoint(data['workerLocation']) : null,
       notifiedWorkerIds: List<String>.from(data['notifiedWorkerIds'] ?? []),
@@ -100,9 +106,11 @@ class JobRequest {
       'customerName': customerName,
       'customerPhone': customerPhone,
       'workerId': workerId,
+      'workerPhone': workerPhone,
       'status': status,
       'jobType': jobType,
       'description': description,
+      'issueImageUrl': issueImageUrl,
       'customerLocation': GeoPoint(customerLocation.latitude, customerLocation.longitude),
       'workerLocation': workerLocation != null ? GeoPoint(workerLocation!.latitude, workerLocation!.longitude) : null,
       'notifiedWorkerIds': notifiedWorkerIds,
