@@ -16,6 +16,7 @@ class Booking {
   final String? workerName;
   final String? workerAvatarUrl;
   final double? workerRating;
+  final double? fare;
 
   const Booking({
     required this.id,
@@ -29,6 +30,7 @@ class Booking {
     this.workerName,
     this.workerAvatarUrl,
     this.workerRating,
+    this.fare,
   });
 
   Booking copyWith({BookingStatus? status, Professional? worker}) {
@@ -44,6 +46,7 @@ class Booking {
       workerName: worker?.name ?? workerName,
       workerAvatarUrl: worker?.avatarUrl ?? workerAvatarUrl,
       workerRating: worker?.rating ?? workerRating,
+      fare: fare,
     );
   }
 }
