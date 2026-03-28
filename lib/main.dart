@@ -18,8 +18,6 @@ import 'ai_assistant/ai_checklist_screen.dart';
 import 'ai_assistant/technician_match.dart';
 import 'ai_assistant/ai_chat_screen.dart';
 import 'screens/rating_screen.dart';
-import 'screens/ai_welcome_screen.dart';
-import 'screens/ai_chat_screen.dart';
 import 'screens/find_professional_screen.dart';
 
 Future<void> main() async {
@@ -91,9 +89,7 @@ class TechniApp extends StatelessWidget {
         '/checklist': (context) => const AiChecklistScreen(),
         '/technician': (context) => const TechnicianMatchScreen(),
         '/rating': (context) => const RatingScreen(),
-        '/ai-welcome': (context) => const AIWelcomeScreen(),
-        '/chat': (context) => const AIChatScreen(),
-        '/technician': (context) => const MainScreen(),
+
       },
       onGenerateRoute: (settings) {
         final routeName = settings.name;
