@@ -51,9 +51,25 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   ),
                 ),
 
+                // Photos button
+                IconButton(
+                  icon: const Icon(Icons.camera_alt, color: Colors.blueGrey),
+                  onPressed: () {
+                    // TODO: Implement upload photos functionality
+                  },
+                ),
+
+                // Voice message button
+                IconButton(
+                  icon: const Icon(Icons.mic, color: Colors.blueGrey),
+                  onPressed: () {
+                    // TODO: Implement record voice functionality
+                  },
+                ),
+
                 // Send button to submit the message
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: const Icon(Icons.send, color: Colors.blue),
                   onPressed: () {
                     // TODO: Implement send message functionality
                     // print(_messageController.text);

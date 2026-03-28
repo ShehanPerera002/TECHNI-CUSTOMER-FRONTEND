@@ -151,13 +151,13 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
               .limit(1)
               .get();
         }
-        print('[DEBUG] Firestore query docs count: ${query.docs.length}');
+        debugPrint('[DEBUG] Firestore query docs count: ${query.docs.length}');
         if (query.docs.isNotEmpty) {
           final data = query.docs.first.data() as Map<String, dynamic>;
-          print('[DEBUG] Firestore login data: $data');
+          debugPrint('[DEBUG] Firestore login data: $data');
           final firestorePassword = data['password']?.toString().trim();
-          print('[DEBUG] Firestore password: ${firestorePassword ?? 'null'}');
-          print('[DEBUG] Entered password: $trimmedPassword');
+          debugPrint('[DEBUG] Firestore password: ${firestorePassword ?? 'null'}');
+          debugPrint('[DEBUG] Entered password: $trimmedPassword');
           if (firestorePassword == null) {
             setState(() {
               _errorText = 'No password set for this user in Firestore.';
@@ -203,10 +203,10 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
           setState(() {
             _errorText = 'No user found with this email.';
           });
-          print('[DEBUG] No user found with this email in Firestore.');
+          debugPrint('[DEBUG] No user found with this email in Firestore.');
         }
       } catch (e) {
-        print('[DEBUG] Firestore login error: $e');
+        debugPrint('[DEBUG] Firestore login error: $e');
         setState(() {
           _errorText = 'Failed to login. Please try again.';
         });

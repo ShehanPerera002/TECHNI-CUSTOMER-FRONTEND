@@ -42,13 +42,6 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
   StreamSubscription<DocumentSnapshot>? _jobStatusSub;
   StreamSubscription<Position>? _customerLocationSub;
 
-  ImageProvider? _avatarProvider(String? url) {
-    final value = (url ?? '').trim();
-    if (value.isEmpty) return null;
-    if (!value.startsWith('http')) return null;
-    return NetworkImage(value);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -191,28 +184,6 @@ class _WorkerOnTheWayScreenState extends State<WorkerOnTheWayScreen> {
 
     // Start updating customer location in Firestore periodically
     _startCustomerLocationUpdates();
-  }
-
-  Future<void> _callWorkerPhone() async {
-    final raw = widget.professional.phoneNumber;
-    final phone = raw.trim();
-
-    if (phone.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Worker phone number not available')),
-        );
-      }
-      return;
-    }
-
-    final uri = Uri.parse('tel:$phone');
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open phone dialer')),
-      );
-    }
   }
 
   Timer? _customerLocationTimer;
@@ -613,7 +584,7 @@ class _TripSheetState extends State<_TripSheet> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0FDF4),
                     border: Border.all(
-                      color: const Color(0xFF22C55E).withOpacity(0.4),
+                      color: const Color(0xFF22C55E).withValues(alpha: 0.4),
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),

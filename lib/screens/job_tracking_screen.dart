@@ -323,7 +323,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -722,8 +722,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     final s = (seconds % 60).toString().padLeft(2, '0');
     return seconds >= 3600 ? '$h:$m:$s' : '$m:$s';
   }
-
-  int _estimatePrice(int seconds) => 100 * ((seconds / 600).ceil());
 }
 
 class _FeedbackForm extends StatefulWidget {
