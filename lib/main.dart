@@ -39,6 +39,10 @@ Future<void> main() async {
   await _requestPermissions();
   await SessionManager.initialize();
 
+  // Force logout on app restart to ensure it "FIRSTLY WELCOME SCREEN AND CUSTOMER NEED TO LOG AND AUTHENTICATE"
+  await FirebaseAuth.instance.signOut();
+  SessionManager.clear();
+
   runApp(const TechniApp());
 }
 
