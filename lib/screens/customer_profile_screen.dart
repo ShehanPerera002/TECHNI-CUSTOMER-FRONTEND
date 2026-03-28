@@ -47,13 +47,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     // 1. Try SessionManager doc ID first (set during login)
     final sessionDocId = SessionManager.customerDocId;
     if (sessionDocId != null && sessionDocId.isNotEmpty) {
-      print('[DEBUG] Trying SessionManager doc ID: $sessionDocId');
+      debugPrint('[DEBUG] Trying SessionManager doc ID: $sessionDocId');
       final doc = await FirebaseFirestore.instance
           .collection('customers')
           .doc(sessionDocId)
           .get();
       if (doc.exists) {
-        print('[DEBUG] Profile found via SessionManager doc ID');
+        debugPrint('[DEBUG] Profile found via SessionManager doc ID');
         return doc.data();
       }
     }
@@ -61,20 +61,20 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     // 2. Try Firebase Auth UID
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      print('[DEBUG] Trying Firebase Auth UID: ${user.uid}');
+      debugPrint('[DEBUG] Trying Firebase Auth UID: ${user.uid}');
       final doc = await FirebaseFirestore.instance
           .collection('customers')
           .doc(user.uid)
           .get();
       if (doc.exists) {
-        print('[DEBUG] Profile found via Firebase Auth UID');
+        debugPrint('[DEBUG] Profile found via Firebase Auth UID');
         return doc.data();
       }
 
       // 3. Fallback: query by email
       final email = user.email;
       if (email != null && email.isNotEmpty) {
-        print('[DEBUG] Trying email fallback: $email');
+        debugPrint('[DEBUG] Trying email fallback: $email');
         var query = await FirebaseFirestore.instance
             .collection('customers')
             .where('email', isEqualTo: email)
@@ -88,7 +88,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               .get();
         }
         if (query.docs.isNotEmpty) {
-          print('[DEBUG] Profile found via email query');
+          debugPrint('[DEBUG] Profile found via email query');
           final data = query.docs.first.data();
           // Cache the doc ID for future lookups
           SessionManager.setCustomerDocId(query.docs.first.id);
@@ -97,7 +97,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       }
     }
 
-    print('[DEBUG] No profile found by any method');
+    debugPrint('[DEBUG] No profile found by any method');
     return null;
   }
 

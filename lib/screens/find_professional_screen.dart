@@ -458,7 +458,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
                     ),
                   );
                   if (pickedTime != null && ctx.mounted) {
-                    Navigator.pop(ctx, pickedTime.format(context));
+                    Navigator.pop(ctx, pickedTime.format(ctx));
                   }
                 },
                 child: const Text(
@@ -671,7 +671,7 @@ class _FindProfessionalScreenState extends State<FindProfessionalScreen> {
           // Loading indicator overlay
           if (_isLoadingWorkers)
             Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               child: const Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),

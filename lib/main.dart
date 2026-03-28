@@ -22,8 +22,12 @@ import 'screens/find_professional_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  debugPrint('[ENV] GEMINI_API_KEY loaded: ${dotenv.env['GEMINI_API_KEY'] != null}');
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('[ENV] GEMINI_API_KEY loaded: ${dotenv.env['GEMINI_API_KEY'] != null}');
+  } catch (e) {
+    debugPrint('[ENV] Warning: Failed to load .env file: $e');
+  }
 
   try {
     await Firebase.initializeApp();
