@@ -72,10 +72,11 @@ class _EmergencyHelpScreenState extends State<EmergencyHelpScreen> {
       String number = '';
       if (_selectedHelp == 'Police') {
         number = '119';
-      } else if (_selectedHelp == 'Ambulance')
+      } else if (_selectedHelp == 'Ambulance') {
         number = '1990';
-      else if (_selectedHelp == 'Fire')
+      } else if (_selectedHelp == 'Fire') {
         number = '110';
+      }
 
       final Uri smsUri = Uri(
         scheme: 'sms',

@@ -201,9 +201,9 @@ class _RatingScreenState extends State<RatingScreen> {
 
               child: ElevatedButton(
                 onPressed: () {
-                  print("Rating: $rating");
-                  print("Comment: ${commentController.text}");
-                  print("Images: ${images.length}");
+                  debugPrint("Rating: $rating");
+                  debugPrint("Comment: ${commentController.text}");
+                  debugPrint("Images: ${images.length}");
                   // Navigate back to home after review submission
                   Navigator.pushNamedAndRemoveUntil(
                     context,

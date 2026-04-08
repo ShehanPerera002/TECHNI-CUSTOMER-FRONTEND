@@ -18,14 +18,16 @@ import 'ai_assistant/ai_checklist_screen.dart';
 import 'ai_assistant/technician_match.dart';
 import 'ai_assistant/ai_chat_screen.dart';
 import 'screens/rating_screen.dart';
-import 'screens/ai_welcome_screen.dart';
-import 'screens/ai_chat_screen.dart';
 import 'screens/find_professional_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  debugPrint('[ENV] GEMINI_API_KEY loaded: ${dotenv.env['GEMINI_API_KEY'] != null}');
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('[ENV] GEMINI_API_KEY loaded: ${dotenv.env['GEMINI_API_KEY'] != null}');
+  } catch (e) {
+    debugPrint('[ENV] Warning: Failed to load .env file: $e');
+  }
 
   try {
     await Firebase.initializeApp();
@@ -40,6 +42,10 @@ Future<void> main() async {
 
   await _requestPermissions();
   await SessionManager.initialize();
+
+  // Force logout on app restart to ensure it "FIRSTLY WELCOME SCREEN AND CUSTOMER NEED TO LOG AND AUTHENTICATE"
+  await FirebaseAuth.instance.signOut();
+  SessionManager.clear();
 
   runApp(const TechniApp());
 }
@@ -91,9 +97,7 @@ class TechniApp extends StatelessWidget {
         '/checklist': (context) => const AiChecklistScreen(),
         '/technician': (context) => const TechnicianMatchScreen(),
         '/rating': (context) => const RatingScreen(),
-        '/ai-welcome': (context) => const AIWelcomeScreen(),
-        '/chat': (context) => const AIChatScreen(),
-        '/technician': (context) => const MainScreen(),
+
       },
       onGenerateRoute: (settings) {
         final routeName = settings.name;
